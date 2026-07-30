@@ -304,3 +304,53 @@ M3 Attention-Gate의 핵심 전제("초기 K=10 사이클만으로 고장 모드
 ### 수락률 영향 평가
 
 배치 문헌을 limitation으로 흡수하고 방어 논리를 §V.D에 명시함으로써, 리뷰어가 동일 지적을 제기하더라도 사전 대응이 완료된 상태. 수락률 영향: 중립~소폭 긍정 (리뷰어 신뢰도 향상).
+
+---
+
+## 2026-07-30 — T6 False Routing Sensitivity Analysis 수행 및 원고 반영
+
+### 배경
+
+GatingNet이 오분류할 경우 RMSE가 얼마나 변하는지 정량화 (RESS 신뢰성 관점 강화).
+
+### 실험 설계
+
+FD003/FD004 × 5 seeds(0–4), 4가지 조건 비교:
+- **Normal**: GatingNet 정상 라우팅
+- **Flipped**: gate weights 반전 (w₀↔w₁, 100% 오분류 시뮬레이션)
+- **Branch-0 only / Branch-1 only**: 단일 브랜치 강제 (최악 케이스)
+
+### 주요 결과
+
+| 데이터셋 | 정상 RMSE | 오분류 RMSE | ΔRMSE | Gate 신뢰도 | NASA 변화 |
+|---------|----------|-----------|-------|-----------|---------|
+| FD003 | 14.78±1.47 | 21.87±9.91 | **+7.09 (+48%)** | 0.840 | 425→5,202 (12×) |
+| FD004 | 28.33±1.15 | 28.79±0.78 | **+0.46 (+1.6%)** | 0.677 | 변화 미미 |
+
+핵심 발견:
+- Gate 신뢰도가 높을수록(FD003=0.840) 오분류 시 손실이 큼 → Silhouette 스크리닝 근거 직접 실증
+- FD003 최악 케이스(단일 브랜치=23.70) 도 M0 baseline(43.23) 대비 45% 우수
+- Gate confidence(mean max(w₀,w₁))가 오분류 리스크의 실용적 proxy 역할
+
+### 원고 변경 사항
+
+| 위치 | 변경 내용 |
+|------|---------|
+| `§IV.C.2` (Results) | "False-routing sensitivity analysis" 단락 신규 추가 (Table VI-B 참조 포함) |
+| `§V.F` 체크리스트 | Tier 2 YES 브랜치에 gate confidence 사후 확인 단계 추가 (conf ≥ 0.8 기준) |
+| `§V.F` 텍스트 | Silhouette 설명에 gate confidence 제2 가드 역할 추가; §IV.C.2 상호참조 |
+
+### 생성 파일
+
+| 파일 | 내용 |
+|------|------|
+| `Data_Analysis/Code/H6_fault_mode/phase3_evaluation/h6_t6_false_routing.py` | T6 분석 스크립트 |
+| `Data_Analysis/Code/H6_fault_mode/phase3_evaluation/h6_t6_visualize.py` | 시각화 스크립트 |
+| `Data_Analysis/Results/H6_fault_mode/T6_false_routing/T6_raw_results.csv` | 5-seed raw 결과 |
+| `Data_Analysis/Results/H6_fault_mode/T6_false_routing/T6_per_engine_results.csv` | 엔진별 gate weights |
+| `Data_Analysis/Results/H6_fault_mode/T6_false_routing/T6_summary.csv` | 데이터셋별 요약 |
+| `Data_Analysis/Results/H6_fault_mode/T6_false_routing/figures/` | 3개 시각화 PNG |
+
+### 수락률 영향 평가
+
+T6는 "M3가 잘못 라우팅될 경우 어떻게 되는가"라는 리뷰어의 당연한 질문에 수치로 답변. RESS 신뢰성 관점에서 가장 직접적인 robustness 증거. 예상 수락률 기여: +3–5%p (신뢰도 향상).

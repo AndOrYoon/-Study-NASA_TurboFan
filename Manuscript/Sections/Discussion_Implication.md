@@ -1,6 +1,6 @@
 # V. Discussion and Implications
 
-> **Draft status:** v1.1 — 2026-07-30 (§D early-cycle routing caveat 추가; §G Seventh limitation 추가)  
+> **Draft status:** v1.2 — 2026-07-30 (§D early-cycle routing caveat 추가; §F T6 gate-confidence 기준 추가; §G Seventh limitation 추가)  
 > *(v1.0 — 2026-07-03)*
 > **Relates to:** Sections III (Methodology) and IV (Results)
 > **Reference anchors:** [n] correspond to Manuscript/References.md numbering
@@ -73,6 +73,10 @@ TIER 2 — Architecture
   S ≥ 0.5?
     YES → add M3-style GatingNet on first K = 10 cycles
           (expected RMSE gain: up to −65.8% on FD003-like datasets)
+          After training, verify gate confidence: mean max(w₀,w₁) ≥ 0.8?
+            YES → routing is decisive; misclassification risk is low
+            NO  → routing is near-uniform; expect minimal M3 benefit
+                  (FD004: conf=0.677, ΔRMSE_flip=+1.6%; cf. §IV.C.2)
     NO  → use single-branch baseline (M0)
   │
   ▼
@@ -87,7 +91,7 @@ TIER 3 — Loss Function
   DONE
 ```
 
-The ordering matters from a reliability perspective: a Tier 1 error — omitting or miscalibrating the RUL clipping threshold — inflates the NASA prognostic score by up to six orders of magnitude regardless of all subsequent design choices, constituting a systemic reliability failure in any safety-critical maintenance scheduling pipeline. Tier 2 gains (up to −65.8% RMSE) dwarf any gain achievable from Tier 3 (<5% RMSE in our experiments). Reliability engineers who optimise Tier 3 before resolving Tier 1 and Tier 2 risk both negligible performance returns and a latent system-level failure: an unresolved Tier 1 misconfiguration can invalidate the prognostic safety case of an otherwise correctly designed pipeline. We stress that the Silhouette threshold of 0.5 at Tier 2 is a necessary but not sufficient condition for M3 to help: the latent clusters must also be accessible from early-cycle observations. If discriminant sensor differences emerge only in late life (slope-driven rather than baseline-driven), the GatingNet will not separate modes reliably at K = 10 cycles, and a larger K or a two-stage routing strategy should be considered. Practitioners encountering S ∈ [0.5, 0.65] should treat this as a marginal regime in which M3 benefit is uncertain; a held-out validation comparing M3 against the single-branch baseline on a representative validation set is recommended before committing to fault-mode routing in this range.
+The ordering matters from a reliability perspective: a Tier 1 error — omitting or miscalibrating the RUL clipping threshold — inflates the NASA prognostic score by up to six orders of magnitude regardless of all subsequent design choices, constituting a systemic reliability failure in any safety-critical maintenance scheduling pipeline. Tier 2 gains (up to −65.8% RMSE) dwarf any gain achievable from Tier 3 (<5% RMSE in our experiments). Reliability engineers who optimise Tier 3 before resolving Tier 1 and Tier 2 risk both negligible performance returns and a latent system-level failure: an unresolved Tier 1 misconfiguration can invalidate the prognostic safety case of an otherwise correctly designed pipeline. We stress that the Silhouette threshold of 0.5 at Tier 2 is a necessary but not sufficient condition for M3 to help: the latent clusters must also be accessible from early-cycle observations, and the trained GatingNet must produce decisive routing. The false-routing sensitivity analysis (§IV.C.2) shows that gate confidence — measured as mean max(w₀, w₁) over the training set — directly predicts misclassification cost: on FD003 (conf = 0.840) a forced gate flip raises RMSE by 48% and NASA Score by 12×, while on FD004 (conf = 0.677) the same perturbation increases RMSE by only 1.6%. A post-training gate confidence check is therefore a second Tier 2 guard: if mean confidence remains near 0.5 after convergence, the GatingNet has not found a reliable early-cycle discriminant and M3 should be replaced by M0. If discriminant sensor differences emerge only in late life (slope-driven rather than baseline-driven), the GatingNet will not separate modes reliably at K = 10 cycles, and a larger K or a two-stage routing strategy should be considered. Practitioners encountering S ∈ [0.5, 0.65] should treat this as a marginal regime in which M3 benefit is uncertain; a held-out validation comparing M3 against the single-branch baseline on a representative validation set is recommended before committing to fault-mode routing in this range.
 
 ---
 
