@@ -1,0 +1,6 @@
+Model,Architecture,FD003 RMSE (mean±std),FD003 NASA (mean±std),FD004 RMSE (mean±std),FD004 NASA (mean±std),FD003 Improvement vs M0
+M0,Single LSTM (baseline),43.23±0.18,34339±2094,28.05±1.74,10586±10040,—
+M1,Hard Routing (GMM-assigned branches),32.45±11.37,27098±29088,49.20±7.17,132003±54238,+24.9%
+M2,Soft Gating (GMM probability-weighted),26.16±14.81,20881±25207,30.71±0.73,50715±57200,+39.5%
+M3 (best),Attention Gate (end-to-end),14.78±1.32,425±127,28.33±1.03,13229±12096,+65.8%†
+Note: † p<0.05 vs M0 (Wilcoxon). M1 FD004 degradation due to test-time cluster assignment collapse (cluster distribution [1:247]). Results averaged over 5 random seeds.

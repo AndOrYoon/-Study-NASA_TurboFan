@@ -1,0 +1,240 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+---
+
+## Environment
+
+**Python:** 3.13 (TensorFlow not supported; use PyTorch)
+**Virtual environment:** `C:\BMAD_PY313\NASA_TurboFan\`
+
+```powershell
+# Activate
+NASA_TurboFan\Scripts\activate
+
+# Run any experiment script
+python Data_Analysis\Code\H7_loss_function\run_all_h7.py
+
+# Run a single hypothesis stage
+python Data_Analysis\Code\H5_normalization\04_run_experiments.py
+
+# EDA re-run
+python eda_turbofan.py
+```
+
+---
+
+## Project Structure
+
+```
+C:\BMAD_PY313\
+├── Dataset/                     ← Raw CMAPSS .txt files + EDA output
+│   ├── train_FD00{1-4}.txt
+│   ├── test_FD00{1-4}.txt
+│   ├── RUL_FD00{1-4}.txt       ← Ground-truth RUL for test engines
+│   └── Figure/                  ← EDA plots (fig01–fig12)
+├── Hypothesis/                  ← Literature review, research-gap analysis
+│   ├── Hypothesis_PossibleValidation.MD
+│   └── Hypothesis_critics.md   ← Reviewer critique checklist
+├── Data_Analysis/
+│   ├── Analysis_Plan.md        ← Canonical experiment design for H2/H5/H6/H7
+│   ├── 주요이슈_및_의사결정.md   ← All resolved design decisions (read before changing anything)
+│   ├── Code/
+│   │   ├── shared/
+│   │   │   └── op_condition_utils.py  ← K-means residualization (used by H5 & H6)
+│   │   ├── H2_clipping/        ← 01–05 scripts (data → run → eval → stats → viz)
+│   │   ├── H5_normalization/   ← 01–06 scripts
+│   │   ├── H6_fault_mode/
+│   │   │   ├── phase1_clustering/
+│   │   │   ├── phase2_models/  ← h6_p2_model_utils.py (shared backbone + utils)
+│   │   │   └── phase3_evaluation/
+│   │   └── H7_loss_function/   ← 00–08 scripts + run_all_h7.py
+│   └── Results/                ← Output CSVs, figures, model checkpoints
+└── Manuscript/
+    ├── Full-Text_Manuscript/
+    │   └── manuscript_full_text.md  ← Primary compiled manuscript (single source of truth)
+    ├── Sections/                ← Source section files (sync with manuscript_full_text.md)
+    │   ├── Methodology.md
+    │   └── Discussion_Implication.md
+    ├── Figures/                 ← Fig1–Fig8 (final manuscript figures)
+    ├── Tables/                  ← Table1–Table5 CSV
+    ├── Tables_Figures.md        ← English figure/table captions
+    └── Pre-Review/
+        ├── Revision_Changelog.md
+        └── TII_Virtual_Submission_Review/
+            ├── TII_Virtual-Review_Report.md   ← Virtual reviewer critique
+            ├── TII_Virtual-Review_Response.md ← Response plan (Phase 1–3)
+            └── Virtual_Review_Changelog.md    ← All Phase 1/2 decisions & rationale
+```
+
+---
+
+## Data & Labels
+
+- **Datasets:** FD001–FD004; 21 raw sensors, space-separated `.txt` files, no header
+- **Column order:** `unit cycle op1 op2 op3 s1…s21`
+- **Constant sensors to drop** (zero-variance, per dataset):
+  - FD001/FD003: `s1 s5 s6 s10 s16 s18 s19` → 14 features remaining
+  - FD002: `s16` → 20 features; FD004: `s16` → 20 features
+- **RUL labeling:** piecewise-linear, `clip=125` is the validated standard. `clip=None` causes catastrophic NASA scores on FD003.
+- **Train/val split:** engine-level (hold out 20% of complete engines, not cycles). Never split by cycle — it causes RUL distribution mismatch.
+- **Test sequences:** last-window (window=30) per engine, zero-pad from the front if `len < 30`.
+
+---
+
+## Operating Condition Residualization (FD002 / FD004)
+
+FD002 and FD004 have 6 operating conditions that shift sensor absolute values by tens to hundreds of units. **All experiments on FD002/FD004 must apply operating-condition residualization before any normalization or model training.**
+
+Canonical implementation: `Data_Analysis/Code/shared/op_condition_utils.py`
+
+```python
+# Train time — fit on train data only
+scaler, km = fit_op_condition_kmeans(train_df)          # K-means k=6 on op1/op2/op3
+cluster_means = compute_cluster_means(train_df, scaler, km, sensor_cols)
+
+# Both train and test
+train_df = apply_op_residual(train_df, scaler, km, cluster_means, sensor_cols)
+test_df  = apply_op_residual(test_df,  scaler, km, cluster_means, sensor_cols)
+```
+
+**H6 variant** (`h6_p2_model_utils.py`): `fit_op_residual_fd004(train_df, sensor_cols)` — fits fresh K-means each run (does not load Phase 1 artifacts). Use `apply_op_residual_fd004()` for transform. Never call the old `load_op_artifacts_fd004()` in Phase 2 model scripts.
+
+---
+
+## Shared LSTM Backbone Architecture
+
+All hypotheses use the same stacked LSTM:
+- **LSTM1(64)** → full sequence output (all timesteps) → Dropout(0.2)
+- **LSTM2(64)** → last timestep → Dropout(0.2) → FC(64→32→ReLU→1)
+- **Window:** 30 cycles, **Batch:** 256, **LR:** 1e-3 (Adam), **WD:** 1e-4, **Patience:** 15 epochs
+
+LSTM1 must pass the **full sequence** (all timesteps) to LSTM2, not just the final hidden state. This is the stacked-LSTM bug that caused incorrect results — always use `out, _ = self.lstm1(x)` and pass `out` to `lstm2`.
+
+### H6 Model Variants (FD003 / FD004 only)
+
+| Model | Architecture | Notes |
+|-------|-------------|-------|
+| M0 | Single LSTM (baseline) | Standard backbone above |
+| M1 | Hard Routing (GMM argmax) | Fails FD004 at test time — cluster distribution collapses to [1:247] |
+| M2 | Soft Gating (GMM probabilities) | Two branches weighted by GMM soft probs; auxiliary loss ×0.1 per branch |
+| M3 | Attention Gate (end-to-end) | `GatingNet` reads first K=10 cycles → softmax gate → two branches; immune to test-time cluster collapse |
+
+M3 training loss: `MSE(final) + 0.05*MSE(branch0) + 0.05*MSE(branch1)`
+M2 training loss: `MSE(final) + 0.1*MSE(branch0) + 0.1*MSE(branch1)`
+
+---
+
+## Metrics
+
+```python
+# RMSE — primary performance metric
+rmse = np.sqrt(np.mean((pred - true) ** 2))
+
+# NASA Score — official competition metric, lower is better
+# Penalises late predictions (d>0) more than early (d<0)
+d = pred - true
+s = np.where(d < 0, np.exp(-d / 13.0) - 1.0, np.exp(d / 10.0) - 1.0)
+nasa_score = float(np.mean(s))   # per-engine mean used for cross-dataset comparison
+```
+
+Report as `mean ± std` over 5 seeds: `[0, 1, 2, 3, 4]`.
+
+> ⚠️ **NASA Score 재계산 주의:** `nasa_score()` in `h6_p2_model_utils.py`는 `pen.sum()`을 사용한다. CSV에 저장된 per-engine mean을 재조합할 때 `np.mean(pen)`이 아닌 `pen.sum()`을 써야 한다. FD003은 100개 테스트 엔진이므로 잘못 쓰면 결과가 100× 작게 나온다.
+
+---
+
+## Statistical Testing
+
+All hypothesis tests use:
+1. **Wilcoxon rank-sum** (one-sided, α=0.05) — treatment vs. baseline
+2. **Benjamini-Hochberg FDR** correction when comparing multiple methods simultaneously
+3. **Cohen's d** (pooled SD) for effect size
+4. Significance threshold: `p_BH < 0.05` AND `|d| ≥ 0.3`
+
+---
+
+## H7 Loss Functions
+
+Defined in `Data_Analysis/Code/H7_loss_function/02_loss_functions.py`. All share the signature `loss_fn(pred, true, life_ratio=None, clip_value=None)`.
+
+| ID | Name | Key parameter |
+|----|------|--------------|
+| L1 | MSE (baseline) | — |
+| L2 | NASA Score Loss | differentiable approx |
+| L3 | DynMSE | `lambda_dyn=1.0` |
+| L4 | Focal-RUL | `gamma=2.0` |
+| L5 | TWA (Time-Weighted Asymmetric) | `lambda_t=10.0, lambda_a=1.0` (Phase 3a best) |
+| L6 | Pinball | `tau=0.35` default; `tau=0.25` best FD001/FD003 |
+| L7 | HubA (Huber-Asymmetric) | `delta=20, lambda_a=3.0` (Phase 3d best) |
+
+`life_ratio` is computed from **training data only** (current cycle / max train cycle). It is `None` at test time — all loss functions must gracefully fall back to unweighted MSE when `life_ratio is None`.
+
+**Key finding:** RUL clipping dominates loss function choice. No custom loss achieves statistically significant improvement over L1 MSE after BH-FDR correction.
+
+---
+
+## Experiment Results Summary (completed)
+
+| Hypothesis | Verdict | Key result |
+|-----------|---------|-----------|
+| H2 (clipping) | Partially accepted | clip=125 minimises RMSE; clip=130 minimises NASA on FD002/FD004 |
+| H5 (normalization) | Rejected | Fleet MinMax (N1) is best; per-unit and RevIN are significantly worse |
+| H6 (fault mode) | Accepted (M3) | M3 Attention Gate: −65.8% RMSE on FD003 vs baseline; RMSE=14.78±1.32 |
+| H7 (loss functions) | Rejected | No loss beats MSE after BH-FDR; clip dominates loss choice |
+
+Results CSVs: `Data_Analysis/Results/H{2,5,6,7}_*/`
+Manuscript-ready figures/tables: `Manuscript/Figures/`, `Manuscript/Tables/`
+
+---
+
+## Key Design Decisions (already resolved — do not re-open)
+
+See `Data_Analysis/주요이슈_및_의사결정.md` for full rationale. Summary:
+
+- **H2 clip candidates:** {75, 100, 125, 130, None} — **not 150** (no academic precedent)
+- **H5 FD002/FD004:** K-means residualization applied *before* any normalizer (shared util)
+- **H5 RevIN (N7):** implemented as `LSTMWithRevIN` model subclass, not preprocessing
+- **H5 boundary group:** engines with lifetime < 150 cycles (not < 50, which is always empty)
+- **H6 M3 gating:** uses first K=10 cycles only — avoids train/test late-cycle mismatch
+- **H2 runs:** 20 (deterministic Ridge; seeds are meaningless for `LinearRegression`)
+- **H2 = prerequisite, not contribution:** clip=125 is confirmed established standard [5,6]. Do not reframe H2 as a novel contribution in the manuscript — it belongs in setup/methods context only.
+- **M3 is LSTM-specific:** Pilot experiments (T3) showed that adding any attention mechanism (Transformer or self-attention LSTM) to the backbone makes M3 routing redundant — attention already captures early-cycle fault patterns implicitly. M3's value is its lightweight overhead (4.9K params, <5%) on top of a standard sequential LSTM backbone.
+
+---
+
+## Manuscript Status (as of 2026-07-09)
+
+**Target journal:** IEEE TII. **Expected acceptance rate:** 35–45%.
+
+**Primary manuscript:** `Manuscript/Full-Text_Manuscript/manuscript_full_text.md`  
+**When editing sections:** always sync changes to the corresponding file in `Manuscript/Sections/`.
+
+### Core Contributions (current framing)
+
+1. First controlled normalisation ablation — Fleet MinMax (N1) significantly outperforms per-unit and RevIN; FD003 inter-seed variance is a fault-mode diagnostic signal.
+2. M3 Attention Gate — 65.8% RMSE reduction on FD003 using first 10 cycles; 4.9K parameter GatingNet, no backbone modification needed.
+3. Three-tier design hierarchy — label engineering > fault-mode architecture > loss function, established via joint cross-dataset ablation.
+4. Practical deployment framework — ordered design decisions with operational cost quantification.
+
+### Phase 2 Pilot Results (excluded from manuscript)
+
+| Task | Result | Decision |
+|------|--------|---------|
+| T3: Transformer + AttnLSTM backbone | M3 routing redundant when backbone has attention | §V.D efficiency framing + §V.H open question only |
+| T4: MC Dropout + Conformal UQ | PICP 44.6%/31%, far below 90% target | Completely excluded |
+| T5: 10-seed M3/FD003 expansion | RMSE=14.48±1.01 (vs 14.78±1.32) | 5-seed result maintained for table consistency |
+
+Phase 3 (N-CMAPSS pilot): not proceeding.
+
+---
+
+## Windows Encoding
+
+Scripts that print Unicode characters (em dash `—`, etc.) may fail on Korean Windows locale (cp949). Add at the top of any script:
+
+```python
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
+```

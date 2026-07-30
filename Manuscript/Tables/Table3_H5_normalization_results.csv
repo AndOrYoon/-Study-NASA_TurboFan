@@ -1,0 +1,9 @@
+Normalizer,Description,FD001 RMSE (mean±std),FD002 RMSE (mean±std),FD003 RMSE (mean±std),FD004 RMSE (mean±std),Sig. vs N1 (FD001),Sig. vs N1 (FD002),Sig. vs N1 (FD003),Sig. vs N1 (FD004)
+N1 (Fleet MinMax),Fleet-level min-max scaling,14.14±0.22,14.31±0.10,19.05±12.86,14.60±0.30,—,—,—,—
+N2 (Fleet Std),Fleet-level z-score normalization,14.38±0.81,14.83±0.55,14.69±0.71,15.33±0.12,No,No,No,Yes*
+N3 (Per-Unit MinMax 5%),Per-engine min-max (5th pct),19.15±0.58,18.28±0.15,19.65±1.09,18.02±0.76,Yes**,Yes**,No,Yes**
+N4 (Per-Unit MinMax 10%),Per-engine min-max (10th pct),19.66±0.87,15.52±0.32,17.35±0.54,16.49±0.18,Yes**,Yes**,No,Yes**
+N5 (Per-Unit Std 5%),Per-engine z-score (5th pct),20.78±0.78,18.49±0.49,21.52±1.68,18.76±0.33,Yes**,Yes**,No,Yes**
+N6 (Per-Unit Std 10%),Per-engine z-score (10th pct),17.90±1.84,16.11±0.22,18.65±1.41,16.62±0.36,Yes**,Yes**,No,Yes**
+N7 (RevIN),Reversible instance normalization,14.92±0.48,18.16±0.27,16.44±0.36,18.28±0.66,Yes*,Yes**,No,Yes**
+Note: *p<0.05 ** p<0.01 (Wilcoxon rank-sum with Benjamini-Hochberg correction). Bold = best per dataset. FD003 N1 high variance attributed to mixed fault modes (see H6).

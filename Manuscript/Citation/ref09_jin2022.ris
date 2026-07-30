@@ -1,0 +1,13 @@
+TY  - JOUR
+AU  - Jin, Rui
+AU  - Chen, Zhen
+AU  - Qi, Yue
+AU  - Yin, Zheng
+TI  - Bi-LSTM-Based Two-Stream Network for Machine Remaining Useful Life Prediction
+JO  - IEEE Transactions on Instrumentation and Measurement
+VL  - 71
+PY  - 2022
+DO  - 10.1109/TIM.2022.3163761
+UR  - https://doi.org/10.1109/TIM.2022.3163761
+N1  - [ref09] RMSE FD001~12.38 FD002~19.57 FD003~12.83 FD004~19.98
+ER  - 

@@ -1,0 +1,12 @@
+TY  - CONF
+AU  - Chung, Youngseog
+AU  - Neiswanger, Willie
+AU  - Char, Ian
+AU  - Schneider, Jeff
+TI  - Beyond Pinball Loss: Quantile Methods for Calibrated Uncertainty Quantification
+T2  - Advances in Neural Information Processing Systems (NeurIPS 2021)
+PY  - 2021
+AN  - arXiv:2010.09964
+UR  - https://arxiv.org/abs/2010.09964
+N1  - [ref41] Foundational critique of pinball loss; shows blind minimisation does not guarantee calibrated intervals — supports H7 L6 (Pinball) finding of no significant gain
+ER  - 

@@ -1,0 +1,11 @@
+Dataset/
+NASA_TurboFan/
+__pycache__/
+*.pyc
+*.pyo
+*.pth
+*.pt
+Data_Analysis/Results/
+.claude/
+*.docx
+*.pdf

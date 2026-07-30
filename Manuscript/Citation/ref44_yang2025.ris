@@ -1,0 +1,14 @@
+TY  - JOUR
+AU  - Yang, Boyuan
+AU  - Zhang, Jinyuan
+AU  - Liu, Ruonan
+AU  - Lin, Di
+AU  - Li, Ping
+AU  - Chen, C. L. Philip
+TI  - Point-to-Set Metric-Gated Mixture of Experts for Multisource Domain Adaptation Fault Diagnosis
+JO  - IEEE Transactions on Neural Networks and Learning Systems
+PY  - 2025
+DO  - 10.1109/TNNLS.2025.3548894
+UR  - https://ieeexplore.ieee.org/document/10934148/
+N1  - [ref44] Early Access, March 2025. Proposes PSMMoEs — metric-learning gating within MoE framework for multisource unsupervised domain adaptation in intelligent fault diagnosis. Uses deep point-to-set distance metric to assign target samples to source-domain experts. Venue hint in task brief was incorrect (Springer Complex & Intelligent Systems); verified venue is IEEE TNNLS. Differentiation from H6 M3: uses metric-learning gating for cross-domain fault classification with multiple labelled source domains; M3 uses early-cycle attention gating for RUL regression in a single unlabelled dataset.
+ER  -

@@ -1,0 +1,15 @@
+TY  - JOUR
+AU  - Fan, Zhengyang
+AU  - Li, Wanru
+AU  - Chang, Kuo-Chu
+TI  - A Two-Stage Attention-Based Hierarchical Transformer for Turbofan Engine Remaining Useful Life Prediction
+JO  - Sensors
+VL  - 24
+IS  - 3
+SP  - 824
+PY  - 2024
+DO  - 10.3390/s24030824
+UR  - https://www.mdpi.com/1424-8220/24/3/824
+N2  - https://pmc.ncbi.nlm.nih.gov/articles/PMC10857698/
+N1  - [ref45] STAR framework — Two-Stage Attention-based hieRarchical Transformer with sequential temporal and sensor-wise variable attention, plus hierarchical encoder-decoder for multi-scale time dependency. Tested on all four CMAPSS sub-datasets; outperforms prior SOTA at publication. Represents the architectural frontier (attention-based Transformer) that this paper's LSTM backbone sits below; cited in Introduction to frame the deliberate backbone choice.
+ER  -

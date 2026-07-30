@@ -1,0 +1,14 @@
+TY  - CONF
+AU  - Kim, Taesung
+AU  - Kim, Jinhee
+AU  - Tae, Yunwon
+AU  - Park, Cheonbok
+AU  - Choi, Jang-Ho
+AU  - Choo, Jaegul
+TI  - Reversible Instance Normalization for Accurate Time-Series Forecasting against Distribution Shift
+T2  - International Conference on Learning Representations (ICLR 2022)
+PY  - 2022
+AN  - arXiv:2110.02454
+UR  - https://openreview.net/forum?id=cGDAkQo1C0p
+N1  - [ref23] Original RevIN paper; proposes symmetric per-instance norm/denorm — evaluated as N7 in H5
+ER  - 

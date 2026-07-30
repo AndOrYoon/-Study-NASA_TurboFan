@@ -1,0 +1,12 @@
+TY  - UNPB
+AU  - Ly, Sel
+AU  - Yang, Rufan
+AU  - Dixit, Ninad
+AU  - Nguyen, Hung Dinh
+TI  - RUL-QMoE: Multiple Non-crossing Quantile Mixture-of-Experts for Probabilistic Remaining Useful Life Predictions of Varying Battery Materials
+PY  - 2025
+DA  - 2025/12
+AN  - arXiv:2512.23725
+UR  - https://arxiv.org/abs/2512.23725
+N1  - [ref43] Extended version for IAAI-26 (38th AAAI Conf. on Innovative Applications of AI). Probabilistic MoE for battery RUL with five cathode-material-specific expert branches and non-crossing quantile regression; targets uncertainty quantification for battery degradation — distinct from H6 M3 (deterministic point prediction, turbofan, unsupervised routing). Differentiation: RUL-QMoE uses supervised material labels to assign experts; M3 routes using early-cycle observations without any label.
+ER  -

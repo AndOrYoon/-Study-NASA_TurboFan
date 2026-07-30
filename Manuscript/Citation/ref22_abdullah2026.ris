@@ -1,0 +1,8 @@
+TY  - UNPB
+AU  - Abdullah, Mohammedali E. B.
+TI  - Asymmetric-Loss-Guided Hybrid CNN-BiLSTM-Attention Model for Industrial RUL Prediction with Interpretable Failure Heatmaps
+PY  - 2026
+AN  - arXiv:2604.13459
+UR  - https://arxiv.org/abs/2604.13459
+N1  - [ref22] Uses NASA asymmetric loss (H7-L2) on CMAPSS FD001; RMSE 17.52, clip=130
+ER  - 

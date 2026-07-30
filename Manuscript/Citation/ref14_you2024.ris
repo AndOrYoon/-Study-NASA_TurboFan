@@ -1,0 +1,14 @@
+TY  - JOUR
+AU  - You, Kang
+AU  - Lu, Shuai
+AU  - Zhao, Xinghao
+AU  - Chen, Ran
+TI  - A 3-D Attention-Enhanced Hybrid Neural Network for Turbofan Engine Remaining Life Prediction Using CNN and BiLSTM Models
+JO  - IEEE Sensors Journal
+VL  - 24
+IS  - 3
+PY  - 2024
+DO  - 10.1109/JSEN.2023.3335994
+UR  - https://doi.org/10.1109/JSEN.2023.3335994
+N1  - [ref14] 3-D spatial-channel attention; recent CMAPSS SOTA with handcrafted degradation auxiliary inputs
+ER  - 

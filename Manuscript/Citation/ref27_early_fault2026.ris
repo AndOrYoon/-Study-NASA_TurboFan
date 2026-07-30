@@ -1,0 +1,7 @@
+TY  - UNPB
+TI  - Early Fault Detection on CMAPSS with Unsupervised LSTM Autoencoders
+PY  - 2026
+AN  - arXiv:2601.10269
+UR  - https://arxiv.org/abs/2601.10269
+N1  - [ref27] Regression-based operating-condition normalization for turbofan; shows raw normalization inadequate for FD002/FD004 (supports H5). Also motivates unsupervised fault onset detection for H6. Author list not retrieved — verify before submission.
+ER  - 

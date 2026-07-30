@@ -1,0 +1,71 @@
+CRediT Author Contribution Statement
+
+[Author Name], Electronics and Telecommunications Research Institute (ETRI),
+Daejeon, South Korea: Conceptualization, Data curation, Formal analysis,
+Investigation, Methodology, Project administration, Software, Validation,
+Visualization, Writing – original draft, Writing – review & editing.
+
+Funding acquisition: N/A (no external funding was received for this work).
+Resources: N/A (all computation used institutional hardware; no external
+resource allocation required).
+Supervision: N/A (single-author work; no supervisory relationship applies).
+
+---
+ROLE-BY-ROLE DETAIL (for internal reference; omit from submission form):
+
+Conceptualization    Formulated the four-hypothesis ablation framework (H2 RUL
+                     clipping, H5 normalization, H6 fault-mode architecture,
+                     H7 loss functions) and the three-tier design hierarchy.
+
+Data curation        Acquired and preprocessed NASA CMAPSS FD001–FD004 datasets;
+                     applied constant-sensor removal, piecewise-linear RUL
+                     labeling (clip=125), engine-level train/val split, and
+                     operating-condition residualization for FD002/FD004.
+
+Formal analysis      Performed all statistical analyses: Wilcoxon rank-sum tests
+                     (one-sided, α=0.05), Benjamini–Hochberg FDR correction, and
+                     Cohen's d effect-size estimation across 800+ LSTM training
+                     runs (5 seeds × multiple conditions × 4 datasets).
+
+Investigation        Conducted all computational experiments using the PyTorch
+                     LSTM framework; executed hypothesis-testing pipeline from
+                     raw data through result aggregation.
+
+Methodology          Designed the controlled ablation protocol, shared stacked-
+                     LSTM backbone architecture, operating-condition K-means
+                     residualization utility, and the M3 Attention Gate gating
+                     network for fault-mode routing.
+
+Project administration
+                     Managed the full experimental timeline, version-controlled
+                     codebase, and iterative manuscript revision cycle.
+
+Software             Wrote all Python experiment scripts (Data_Analysis/Code/),
+                     including H2/H5/H6/H7 pipelines, shared utilities
+                     (op_condition_utils.py, h6_p2_model_utils.py), loss-function
+                     library, and statistical reporting tools.
+
+Validation           Verified reproducibility of key results across 5 random
+                     seeds; confirmed metric implementations (RMSE, NASA score)
+                     against published competition baselines.
+
+Visualization        Produced all 8 manuscript figures (Fig. 1–8) covering
+                     dataset characteristics, ablation comparisons, fault-mode
+                     clustering, and the three-tier design hierarchy diagram.
+
+Writing – original draft
+                     Authored the complete manuscript from scratch, including
+                     Introduction, Methodology, Experimental Setup, Results,
+                     Discussion, and Conclusion sections.
+
+Writing – review & editing
+                     Revised the manuscript through multiple review cycles,
+                     incorporating virtual reviewer critiques and self-review
+                     against RESS scope and IEEE TII style guides.
+
+---
+SUBMISSION NOTE: Replace "[Author Name]" with the submitting author's full name
+before uploading to the RESS Editorial Manager. The summary paragraph at the top
+(before the dashed line) is the text to paste into the CRediT field. The role-by-
+role detail block below is for internal reference only and should not appear in
+the submission form.

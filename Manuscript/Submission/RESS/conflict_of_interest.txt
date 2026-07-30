@@ -1,0 +1,34 @@
+Declaration of Competing Interests
+
+The author declares that there are no known competing financial interests or personal
+relationships that could have appeared to influence the work reported in this paper.
+
+Specifically:
+
+- This study uses only the NASA Commercial Modular Aero-Propulsion System Simulation
+  (CMAPSS) benchmark dataset, which is publicly available through the NASA Prognostics
+  Center of Excellence Data Repository. No proprietary, confidential, or commercially
+  restricted data were used.
+
+- No commercial products, tools, or platforms were developed, evaluated, or promoted
+  as part of this research.
+
+- This work received no financial support from industry, commercial entities, or any
+  organisation with a financial interest in the outcomes of the study.
+
+- The research was conducted as independent academic work at the Electronics and
+  Telecommunications Research Institute (ETRI), Daejeon, South Korea.
+
+Author: [Author Name]
+Affiliation: Electronics and Telecommunications Research Institute (ETRI),
+             Daejeon, South Korea
+
+---
+[RESS / Elsevier submission note: Paste the statement above ("The author declares
+that there are no known competing financial interests...") into the "Declaration of
+Competing Interests" field in Editorial Manager. The full explanation above is for
+the cover letter or the statement box — include as much as the submission system
+permits. The mandatory one-sentence form accepted by Elsevier is:
+
+"The author declares that there are no known competing financial interests or personal
+relationships that could have appeared to influence the work reported in this paper."]

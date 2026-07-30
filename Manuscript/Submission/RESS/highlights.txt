@@ -1,0 +1,20 @@
+Highlights
+(3–5 bullet points, each ≤ 85 characters including spaces)
+
+• Fleet min-max outperforms per-unit and RevIN normalization on three of four datasets
+• FD003 variance anomaly traces to latent fault-mode heterogeneity, not normalization
+• M3 attention gate reduces FD003 RMSE by 65.8% using only first five flight cycles
+• No custom loss beats MSE after BH-FDR; misclipping inflates NASA scores 306,000-fold
+• Three-tier checklist: label engineering → fault-mode architecture → loss function
+
+---
+Character counts (must be ≤ 85 each):
+1. "Fleet min-max outperforms per-unit and RevIN normalization on three of four datasets" = 83 ✓
+2. "Anomalous FD003 inter-seed variance traces to fault-mode heterogeneity, not normalization" = 89 ← TRIM
+3. "M3 attention gate reduces FD003 RMSE by 65.8% using only first five flight cycles" = 81 ✓
+4. "No custom loss beats MSE after BH-FDR; misclipping inflates NASA scores 306,000-fold" = 84 ✓
+5. "Three-tier checklist: label engineering → fault-mode architecture → loss function" = 81 ✓
+
+NOTE: Bullet 2 is 89 chars. Suggested fix:
+"FD003 inter-seed variance traces to latent fault-mode heterogeneity, not normalization" = 86 → still 1 over
+"FD003 variance anomaly traces to latent fault-mode heterogeneity, not normalization" = 83 ✓

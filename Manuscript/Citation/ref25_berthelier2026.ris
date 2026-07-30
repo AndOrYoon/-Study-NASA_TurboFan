@@ -1,0 +1,14 @@
+TY  - UNPB
+AU  - Berthelier, Gaspard
+AU  - Nabil, Tahar
+AU  - Le Naour, Etienne
+AU  - Niamke, Richard
+AU  - Perlaza, Samir
+AU  - Neglia, Giovanni
+TI  - On the Role of Reversible Instance Normalization
+PY  - 2026
+DA  - 2026/03
+AN  - arXiv:2603.11869
+UR  - https://arxiv.org/abs/2603.11869
+N1  - [ref25] Ablation study identifying three distinct normalisation challenges (temporal, spatial, conditional) and showing that RevIN conflates them; several RevIN components are redundant or counterproductive when the primary challenge is conditional offset rather than temporal distribution shift. Directly supports H5 finding that RevIN (N7) fails on multi-condition FD002/FD004. Note: previous ref25_berthelier2026.ris contained a wrong paper (DLinear photovoltaic forecasting, DOI 10.1109/ddcls58216.2023.10166973); this file corrects that error.
+ER  -

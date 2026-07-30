@@ -1,0 +1,13 @@
+Declaration of Generative AI and AI-assisted Technologies in the Writing Process
+
+During the preparation of this work the authors used Claude (Anthropic) in order to
+assist with manuscript drafting, language editing, and literature review. After using
+this tool/service, the authors reviewed and edited the content as needed and take full
+responsibility for the content of the publication.
+
+---
+[RESS Requirement: Elsevier requires disclosure if any AI tool was used in manuscript
+preparation. If no AI was used, replace with:]
+
+"The authors declare that no generative AI or AI-assisted technologies have been used
+in the writing process of this manuscript."

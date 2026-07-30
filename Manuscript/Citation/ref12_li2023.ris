@@ -1,0 +1,13 @@
+TY  - JOUR
+AU  - Li, Jian
+AU  - Li, Xiaoli
+AU  - He, David
+TI  - Remaining Useful Life Prediction of Turbofan Engines Using CNN-LSTM-SAM Approach
+JO  - IEEE Sensors Journal
+VL  - 23
+IS  - 10
+PY  - 2023
+DO  - 10.1109/JSEN.2023.3243540
+UR  - https://doi.org/10.1109/JSEN.2023.3243540
+N1  - [ref12] CNN+LSTM+self-attention for FD002/FD004 multi-operating-point
+ER  - 
