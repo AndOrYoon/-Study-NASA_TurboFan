@@ -105,7 +105,7 @@ The final prediction is $\hat{y}_{\text{final}} = w_0\hat{y}_0 + w_1\hat{y}_1$ w
 
 $$\mathcal{L}_{\text{M3}} = \text{MSE}(\hat{y}_{\text{final}},\, y) + 0.05\cdot\text{MSE}(\hat{y}_0,\, y) + 0.05\cdot\text{MSE}(\hat{y}_1,\, y)$$
 
-By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004.
+By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. To quantify M3's deployment robustness to GatingNet misclassification, we conduct a false-routing sensitivity analysis (§IV.C.2): gate weights are systematically perturbed — fully inverted (w₀ ↔ w₁), forced to Branch-0 only, or forced to Branch-1 only — and the resulting RMSE degradation is measured across all five seeds on FD003 and FD004. GatingNet confidence, defined as mean max(w₀, w₁) over the test set, is proposed as a post-training reliability indicator for routing deployment.
 
 For M1 and M2, GMM cluster assignments (k = 2, full covariance) are derived by unsupervised fitting on degradation-slope features of seven discriminant sensors identified by EDA (s15, s20, s21, s7, s12, s2, s4). The inter-cluster discriminability of each sensor is quantified by its inter-cluster z-score:
 
