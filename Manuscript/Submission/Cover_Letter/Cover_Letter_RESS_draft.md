@@ -8,6 +8,7 @@
 
 Young Seog Yoon, Ph.D.
 Principal Researcher
+Behavioral Intelligence for Autonomous Manufacturing Research Section
 Electronics and Telecommunications Research Institute (ETRI)
 Daejeon, Republic of Korea
 isay@etri.re.kr
@@ -38,6 +39,7 @@ Sincerely,
 
 Young Seog Yoon, Ph.D.
 Principal Researcher
+Behavioral Intelligence for Autonomous Manufacturing Research Section
 Electronics and Telecommunications Research Institute (ETRI)
 isay@etri.re.kr
 
