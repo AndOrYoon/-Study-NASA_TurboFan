@@ -1,25 +1,25 @@
 # III. Methodology
 
-> **Draft status:** v1.2 — 2026-08-12 (K=6 선택 근거 명시; RevIN 역변환 이유 수정 "dimensionally distinct" → global degradation trend 소거; LSTM 백본 선택 3가지 근거 단락 추가)
+> **Draft status:** v1.3 — 2026-08-13 (RevIN 역변환 메커니즘 명시 — window mean 감소로 RUL 궤적 상쇄 메커니즘 추가; We → 수동태 전환)
 > **Style:** Elsevier single-column (elsarticle, review mode) — Markdown source; compiled to LaTeX via build_ress_latex.py
 
 ---
 
 ## A. Dataset
 
-We used the NASA CMAPSS benchmark, which comprises four sub-datasets (FD001–FD004) simulating turbofan engine run-to-failure under varying operating conditions and fault modes (Table I). Each dataset records 21 raw sensor channels per flight cycle together with a held-out test set and ground-truth RUL values for the final observation of each test engine.
+The NASA CMAPSS benchmark was used, comprising four sub-datasets (FD001–FD004) simulating turbofan engine run-to-failure under varying operating conditions and fault modes (Table I). Each dataset records 21 raw sensor channels per flight cycle together with a held-out test set and ground-truth RUL values for the final observation of each test engine.
 
 ---
 
 ## B. Data Preprocessing
 
-Seven constant-variance sensor channels were removed per dataset. For FD001 and FD003, sensors s1, s5, s6, s10, s16, s18, and s19 were discarded, leaving 14 input features; for FD002 and FD004, only s16 is constant, yielding 20 features. RUL targets followed a piecewise-linear formulation: for each training engine, cycles where the remaining life exceeds a clipping threshold τ receive a constant label of τ, while the final segment decreases linearly to zero. We evaluated five clipping values (τ ∈ {75, 100, 125, 130, ∞}), with τ = 125 cycles serving as the standard baseline per established literature [5, 6]. Ground-truth test RUL values are provided directly by the benchmark; no RUL estimation was performed at evaluation time.
+Seven constant-variance sensor channels were removed per dataset. For FD001 and FD003, sensors s1, s5, s6, s10, s16, s18, and s19 were discarded, leaving 14 input features; for FD002 and FD004, only s16 is constant, yielding 20 features. RUL targets followed a piecewise-linear formulation: for each training engine, cycles where the remaining life exceeds a clipping threshold τ receive a constant label of τ, while the final segment decreases linearly to zero. Five clipping values were evaluated (τ ∈ {75, 100, 125, 130, ∞}), with τ = 125 cycles serving as the standard baseline per established literature [5, 6]. Ground-truth test RUL values are provided directly by the benchmark; no RUL estimation was performed at evaluation time.
 
 ---
 
 ## C. Operating-Condition Residualization
 
-FD002 and FD004 contain six discrete operating conditions that shift absolute sensor levels by tens to hundreds of units. We applied K-means residualization to decouple degradation signals from operating-point offsets. A K-means model (k = 6, matching the six known discrete operating conditions present in FD002 and FD004) was fitted on the three operating-condition variables (op1, op2, op3) of the training set using standardised inputs; per-cluster sensor means were computed from training data only and subtracted from each observation:
+FD002 and FD004 contain six discrete operating conditions that shift absolute sensor levels by tens to hundreds of units. K-means residualization was applied to decouple degradation signals from operating-point offsets. A K-means model (k = 6, matching the six known discrete operating conditions present in FD002 and FD004) was fitted on the three operating-condition variables (op1, op2, op3) of the training set using standardised inputs; per-cluster sensor means were computed from training data only and subtracted from each observation:
 
 $$z_{i,j} = x_{i,j} - \mu_{c(i),\,j}$$
 
@@ -29,9 +29,9 @@ where c(i) denotes the cluster assignment of cycle i and μ_{c,j} is the trainin
 
 ## D. Normalization Strategies (H2)
 
-We compared seven normalization strategies (N1–N7) to evaluate the effect of the reference-statistics choice. Fleet-level methods compute statistics across all training engines: N1 applies min-max scaling to [0, 1] and N2 applies z-score standardisation. Per-unit methods (N3–N6) use each engine's own early-cycle observations as the reference baseline, removing initial-condition offsets before any degradation signal is visible: N3 and N5 apply min-max and z-score over the first 5 cycles; N4 and N6 apply the same transforms over the first 10 cycles.
+Seven normalization strategies (N1–N7) were compared to evaluate the effect of the reference-statistics choice. Fleet-level methods compute statistics across all training engines: N1 applies min-max scaling to [0, 1] and N2 applies z-score standardisation. Per-unit methods (N3–N6) use each engine's own early-cycle observations as the reference baseline, removing initial-condition offsets before any degradation signal is visible: N3 and N5 apply min-max and z-score over the first 5 cycles; N4 and N6 apply the same transforms over the first 10 cycles.
 
-N7 implements Reversible Instance Normalization (RevIN; Kim et al. [23]) as a learnable module within the model. Each 30-cycle inference window is normalised by its instantaneous mean and standard deviation, with trainable affine parameters (γ, β). The inverse transform is not applied to the scalar RUL output: applying per-window de-normalisation to a regression target would progressively erase the global degradation trend, because each 30-cycle window's instance statistics encode absolute degradation level rather than cycle-to-cycle deviations. N7 therefore implements the forward (normalisation) pass of RevIN only, making it equivalent to per-window instance normalisation with learnable affine parameters.
+N7 implements Reversible Instance Normalization (RevIN; Kim et al. [23]) as a learnable module within the model. Each 30-cycle inference window is normalised by its instantaneous mean and standard deviation, with trainable affine parameters (γ, β). The inverse transform is not applied to the scalar RUL output: RevIN's inverse adds back the window's instance mean and scales by its standard deviation — operations designed to restore multi-step sensor forecasts to their original measurement units. For scalar RUL regression, however, the window's instance mean decreases as the engine degrades (sensor readings shift systematically with health deterioration); applying the inverse transform would therefore impose a sensor-level offset on each RUL prediction that changes with degradation state, partially cancelling the downward trajectory the model is learning. N7 therefore implements the forward (normalisation) pass of RevIN only, making it equivalent to per-window instance normalisation with learnable affine parameters.
 
 N1 served as the primary comparison baseline. All strategies were evaluated on the identical backbone with all other experimental factors fixed.
 
@@ -89,7 +89,7 @@ M3's GatingNet adds only 4.9K parameters above M1/M2 (< 5% overhead), confirming
 
 ## F. Fault-Mode Architectures (H3)
 
-We compared four architectures on FD003 and FD004 to assess whether explicit fault-mode separation improves RUL accuracy.
+Four architectures were compared on FD003 and FD004 to assess whether explicit fault-mode separation improves RUL accuracy.
 
 **M0 (Baseline)** is a single-branch model using the shared backbone without any fault-mode handling.
 
@@ -111,7 +111,7 @@ The final prediction is $\hat{y}_{\text{final}} = w_0\hat{y}_0 + w_1\hat{y}_1$ w
 
 $$\mathcal{L}_{\text{M3}} = \text{MSE}(\hat{y}_{\text{final}},\, y) + 0.05\cdot\text{MSE}(\hat{y}_0,\, y) + 0.05\cdot\text{MSE}(\hat{y}_1,\, y)$$
 
-By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. To quantify M3's deployment robustness to GatingNet misclassification, we conducted a false-routing sensitivity analysis (§III.C.2): gate weights were systematically perturbed — fully inverted (w₀ ↔ w₁), forced to Branch-0 only, or forced to Branch-1 only — and the resulting RMSE degradation was measured across all five seeds on FD003 and FD004. GatingNet confidence, defined as mean max(w₀, w₁) over the test set, is proposed as a post-training reliability indicator for routing deployment.
+By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. To quantify M3's deployment robustness to GatingNet misclassification, a false-routing sensitivity analysis was conducted (§III.C.2): gate weights were systematically perturbed — fully inverted (w₀ ↔ w₁), forced to Branch-0 only, or forced to Branch-1 only — and the resulting RMSE degradation was measured across all five seeds on FD003 and FD004. GatingNet confidence, defined as mean max(w₀, w₁) over the test set, is proposed as a post-training reliability indicator for routing deployment.
 
 For M1 and M2, GMM cluster assignments (k = 2, full covariance) were derived by unsupervised fitting on degradation-slope features of seven discriminant sensors identified by EDA (s15, s20, s21, s7, s12, s2, s4). The inter-cluster discriminability of each sensor is quantified by its inter-cluster z-score:
 
@@ -123,7 +123,7 @@ where $\bar{\mu}_{c,j}$ is the training-set mean of sensor $j$ within cluster $c
 
 ## G. Loss Functions (H4)
 
-We evaluated seven training loss functions to determine whether asymmetric or dynamically weighted objectives improve over standard MSE. All functions share the signature `loss(pred, true, life_ratio=None)`, where life_ratio = 1 − RUL/RUL_max is a training-time weighting signal computed from training-set cycle counts only; it is set to None at inference time, eliminating any dependency on unknown test-set engine lifetimes.
+Seven training loss functions were evaluated to determine whether asymmetric or dynamically weighted objectives improve over standard MSE. All functions share the signature `loss(pred, true, life_ratio=None)`, where life_ratio = 1 − RUL/RUL_max is a training-time weighting signal computed from training-set cycle counts only; it is set to None at inference time, eliminating any dependency on unknown test-set engine lifetimes.
 
 | ID | Name | Key formulation |
 |----|------|----------------|

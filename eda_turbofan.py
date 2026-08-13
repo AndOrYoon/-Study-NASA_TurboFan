@@ -287,23 +287,23 @@ plt.close()
 # FIG 10 — Clipped RUL (piece-wise linear) effect
 # ══════════════════════════════════════════════════════════════════════════
 print("[10/12] Clipped RUL comparison...")
+_fig10_colors = ["#7f7f7f", "#0072B2"]   # Raw=gray, Clipped=Wong blue
 fig, axes = plt.subplots(1, 2, figsize=(13, 5))
-for ax, clip in zip(axes, [None, 125]):
+for ax, (clip, bar_color) in zip(axes, zip([None, 125], _fig10_colors)):
     rul_vals = trains["FD001"]["RUL"].copy()
     if clip:
         rul_vals = rul_vals.clip(upper=clip)
         title = f"RUL clipped at {clip} (piece-wise linear)"
     else:
         title = "Raw RUL (linear decay)"
-    ax.hist(rul_vals, bins=60, color="#673AB7", alpha=0.8, edgecolor="white", lw=0.3)
-    ax.axvline(rul_vals.mean(), color="red", lw=1.5, linestyle="--",
-               label=f"Mean={rul_vals.mean():.0f}")
+    ax.hist(rul_vals, bins=60, color=bar_color, alpha=0.85, edgecolor="white", lw=0.3)
+    ax.axvline(rul_vals.mean(), color="#D55E00", lw=1.8, linestyle="--",
+               label=f"Mean = {rul_vals.mean():.0f}")
     ax.set_title(title); ax.set_xlabel("RUL"); ax.set_ylabel("Count")
     ax.legend(fontsize=8)
 
-plt.suptitle("Fig 10 — Effect of RUL Clipping Strategy (FD001)", fontsize=13, fontweight="bold")
 plt.tight_layout()
-plt.savefig(os.path.join(FIG_DIR, "fig10_rul_clipping.png"), bbox_inches="tight")
+plt.savefig(os.path.join(FIG_DIR, "fig10_rul_clipping.png"), dpi=300, bbox_inches="tight")
 plt.close()
 
 # ══════════════════════════════════════════════════════════════════════════

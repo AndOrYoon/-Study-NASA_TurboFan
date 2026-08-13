@@ -18,6 +18,26 @@ from matplotlib.cm import ScalarMappable
 from config_h7 import RESULT_DIR, FIGURES_DIR, LOSS_NAMES, DATASETS
 
 MATRIX_CSV = os.path.join(RESULT_DIR, "phase2b_results_matrix.csv")
+RESS_DPI = 300
+WONG_7 = ['#0072B2', '#E69F00', '#009E73', '#D55E00', '#CC79A7', '#56B4E9', '#F0E442']
+
+plt.rcParams.update({
+    'figure.facecolor': 'white',
+    'axes.facecolor': 'white',
+    'axes.grid': True,
+    'grid.alpha': 0.2,
+    'grid.linestyle': '--',
+    'grid.color': '#cccccc',
+    'axes.spines.top': False,
+    'axes.spines.right': False,
+    'font.size': 9,
+    'axes.titlesize': 10,
+    'axes.labelsize': 9,
+    'xtick.labelsize': 8,
+    'ytick.labelsize': 8,
+    'legend.fontsize': 8,
+    'legend.framealpha': 0.85,
+})
 
 print("=" * 60)
 print("H4 Visualization")
@@ -76,7 +96,7 @@ for i, ds in enumerate(DATASETS, 1):
     plot_nasa_heatmap(ds, ax=ax)
     fig.tight_layout()
     fname = os.path.join(FIGURES_DIR, f"fig_H7_0{i}_nasa_heatmap_{ds}.png")
-    fig.savefig(fname, dpi=150, bbox_inches="tight")
+    fig.savefig(fname, dpi=RESS_DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved: {fname}")
 
@@ -84,29 +104,32 @@ for i, ds in enumerate(DATASETS, 1):
 # ─────────────────────────────────────────────────────────────────────────────
 # fig_H7_05: Clip × Loss interaction effect
 # ─────────────────────────────────────────────────────────────────────────────
-fig, axes = plt.subplots(1, 4, figsize=(16, 4), sharey=False)
+CLIP_LABELS = {"clip_100": "100", "clip_125": "125", "clip_130": "130", "clip_none": "None"}
+clip_x = [CLIP_LABELS[c] for c in CLIP_ORDER]
+
+fig, axes = plt.subplots(1, 4, figsize=(13, 4), sharey=False)
 for ax, ds in zip(axes, DATASETS):
     sub   = matrix[matrix["dataset"] == ds]
     pivot = (sub.groupby(["clip", "loss_fn"])["nasa_mean"]
                 .mean()
                 .unstack("loss_fn")
                 .reindex(index=CLIP_ORDER, columns=LOSS_ORDER))
-    for loss in LOSS_ORDER:
+    for li, loss in enumerate(LOSS_ORDER):
         if loss in pivot.columns:
-            ax.plot(CLIP_ORDER, pivot[loss], marker="o", label=loss, linewidth=1.5)
+            ax.plot(clip_x, pivot[loss].values, marker="o",
+                    label=loss, linewidth=1.5, color=WONG_7[li % len(WONG_7)])
+    ax.set_yscale("log")
     ax.set_title(ds, fontsize=10)
-    ax.set_xlabel("Clip")
-    ax.set_ylabel("NASA Score" if ax is axes[0] else "")
-    ax.tick_params(axis="x", rotation=25)
-    ax.grid(True, alpha=0.3)
+    ax.set_xlabel("Clip threshold")
+    ax.set_ylabel("NASA Score (log)" if ax is axes[0] else "")
+    ax.tick_params(axis="x", labelsize=8)
 
-handles, labels = axes[-1].get_legend_handles_labels()
-fig.legend(handles, labels, loc="upper right", fontsize=8, ncol=1,
-           bbox_to_anchor=(1.12, 0.95))
-fig.suptitle("H4 Clip × Loss Interaction Effect (NASA Score)", fontsize=12)
-fig.tight_layout()
+handles, labels_leg = axes[0].get_legend_handles_labels()
+fig.legend(handles, labels_leg, loc="upper right", fontsize=8, ncol=1,
+           bbox_to_anchor=(1.0, 0.95), title="Loss fn", title_fontsize=8)
+fig.tight_layout(rect=[0, 0, 0.88, 1])
 fname = os.path.join(FIGURES_DIR, "fig_H7_05_clip_loss_interaction.png")
-fig.savefig(fname, dpi=150, bbox_inches="tight")
+fig.savefig(fname, dpi=RESS_DPI, bbox_inches="tight")
 plt.close(fig)
 print(f"Saved: {fname}")
 

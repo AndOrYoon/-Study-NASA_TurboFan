@@ -22,7 +22,29 @@ os.makedirs(FIGURES_DIR, exist_ok=True)
 
 MODELS   = ["M0", "M1", "M2", "M3"]
 DATASETS = ["FD003", "FD004"]
-COLORS   = {"M0": "#7f7f7f", "M1": "#1f77b4", "M2": "#ff7f0e", "M3": "#2ca02c"}
+COLORS   = {"M0": "#7f7f7f", "M1": "#0072B2", "M2": "#E69F00", "M3": "#009E73"}
+
+RESS_DPI = 300
+
+
+def set_ress_style():
+    plt.rcParams.update({
+        'figure.facecolor': 'white',
+        'axes.facecolor': 'white',
+        'axes.grid': True,
+        'grid.alpha': 0.2,
+        'grid.linestyle': '--',
+        'grid.color': '#cccccc',
+        'axes.spines.top': False,
+        'axes.spines.right': False,
+        'font.size': 9,
+        'axes.titlesize': 10,
+        'axes.labelsize': 9,
+        'xtick.labelsize': 8,
+        'ytick.labelsize': 8,
+        'legend.fontsize': 8,
+        'legend.framealpha': 0.85,
+    })
 COL_NAMES = (["unit_number","cycle","op_setting_1","op_setting_2","op_setting_3"]
              + [f"s{i}" for i in range(1,22)])
 
@@ -36,8 +58,7 @@ def fig_model_comparison():
         return
 
     df  = pd.read_csv(cmp_path)
-    fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=False)
-    fig.suptitle("H3: Multi-Branch LSTM — RMSE by Model", fontsize=14)
+    fig, axes = plt.subplots(1, 2, figsize=(9, 4.5), sharey=False)
 
     for ax, dataset in zip(axes, DATASETS):
         sub  = df[df["dataset"] == dataset]
@@ -64,7 +85,7 @@ def fig_model_comparison():
 
     plt.tight_layout()
     out = os.path.join(FIGURES_DIR, "fig_H6_01_model_comparison.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight"); plt.close()
+    plt.savefig(out, dpi=RESS_DPI, bbox_inches="tight"); plt.close()
     print(f"  Saved: {out}")
 
 
@@ -78,10 +99,9 @@ def fig_ablation_silhouette():
 
     df  = pd.read_csv(sil_path)
     df["dataset"] = df["dataset"].str.upper()   # normalise fd003→FD003
-    fig, axes = plt.subplots(1, 2, figsize=(11, 4), sharey=True)
-    fig.suptitle("H3: Clustering Silhouette by Feature Variant", fontsize=13)
+    fig, axes = plt.subplots(1, 2, figsize=(8, 4), sharey=True)
     variants = ["AB_full", "AB_slope", "AB_late"]   # fixed order
-    v_colors = {"AB_full": "#1f77b4", "AB_slope": "#ff7f0e", "AB_late": "#2ca02c"}
+    v_colors = {"AB_full": "#0072B2", "AB_slope": "#E69F00", "AB_late": "#009E73"}
 
     for ax, dataset in zip(axes, DATASETS):
         sub = df[df["dataset"] == dataset]
@@ -98,7 +118,7 @@ def fig_ablation_silhouette():
 
     plt.tight_layout()
     out = os.path.join(FIGURES_DIR, "fig_H6_02_ablation_silhouette.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight"); plt.close()
+    plt.savefig(out, dpi=RESS_DPI, bbox_inches="tight"); plt.close()
     print(f"  Saved: {out}")
 
 
@@ -150,7 +170,7 @@ def fig_cluster_profiles():
 
     plt.tight_layout()
     out = os.path.join(FIGURES_DIR, "fig_H6_03_cluster_profiles.png")
-    plt.savefig(out, dpi=150, bbox_inches="tight"); plt.close()
+    plt.savefig(out, dpi=RESS_DPI, bbox_inches="tight"); plt.close()
     print(f"  Saved: {out}")
 
 
@@ -158,6 +178,7 @@ if __name__ == "__main__":
     print("=" * 60)
     print("H6 Phase 3 — Generating Figures")
     print("=" * 60)
+    set_ress_style()
     fig_model_comparison()
     fig_ablation_silhouette()
     fig_cluster_profiles()

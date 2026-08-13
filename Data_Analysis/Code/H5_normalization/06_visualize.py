@@ -49,8 +49,31 @@ NORM_LABELS = {
 }
 GROUPS = ["boundary", "medium", "long"]
 
-PALETTE = sns.color_palette("tab10", n_colors=7)
+WONG_7 = ['#0072B2', '#E69F00', '#009E73', '#D55E00', '#CC79A7', '#56B4E9', '#F0E442']
+PALETTE = WONG_7
 NORM_COLORS = dict(zip(NORM_IDS, PALETTE))
+
+RESS_DPI = 300
+
+
+def set_ress_style():
+    plt.rcParams.update({
+        'figure.facecolor': 'white',
+        'axes.facecolor': 'white',
+        'axes.grid': True,
+        'grid.alpha': 0.2,
+        'grid.linestyle': '--',
+        'grid.color': '#cccccc',
+        'axes.spines.top': False,
+        'axes.spines.right': False,
+        'font.size': 9,
+        'axes.titlesize': 10,
+        'axes.labelsize': 9,
+        'xtick.labelsize': 8,
+        'ytick.labelsize': 8,
+        'legend.fontsize': 8,
+        'legend.framealpha': 0.85,
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -84,7 +107,7 @@ def load_stat():
 
 def _save(fig, name: str):
     path = FIG_DIR / name
-    fig.savefig(path, dpi=150, bbox_inches="tight")
+    fig.savefig(path, dpi=RESS_DPI, bbox_inches="tight")
     plt.close(fig)
     print(f"Saved {path}")
 
@@ -103,8 +126,8 @@ def fig_rmse_heatmap(metrics: pd.DataFrame):
         linewidths=0.5, ax=ax,
         cbar_kws={"label": "RMSE (cycles)"},
     )
-    ax.set_title("H2 — RMSE by Normalizer × Dataset (mean over 5 seeds)",
-                 fontsize=12, pad=10)
+    ax.set_title("RMSE by Normalizer × Dataset (mean over 5 seeds)",
+                 fontsize=10, pad=10)
     ax.set_xlabel("Dataset", fontsize=10)
     ax.set_ylabel("Normalizer", fontsize=10)
     ax.set_yticklabels(
@@ -128,8 +151,8 @@ def fig_nasa_heatmap(metrics: pd.DataFrame):
         linewidths=0.5, ax=ax,
         cbar_kws={"label": "NASA Score (lower = better)"},
     )
-    ax.set_title("H2 — NASA Prognostic Score by Normalizer × Dataset",
-                 fontsize=12, pad=10)
+    ax.set_title("NASA Prognostic Score by Normalizer × Dataset",
+                 fontsize=10, pad=10)
     ax.set_xlabel("Dataset", fontsize=10)
     ax.set_ylabel("Normalizer", fontsize=10)
     ax.set_yticklabels(
@@ -165,7 +188,7 @@ def fig_subgroup_rmse(subgroup: pd.DataFrame):
         ax.legend(title="Dataset", fontsize=7, title_fontsize=7)
         ax.grid(axis="y", alpha=0.3)
 
-    fig.suptitle("H2 — Subgroup RMSE by Lifetime Group", fontsize=12, y=1.01)
+    fig.suptitle("RMSE by Lifetime Group", fontsize=10, y=1.01)
     fig.tight_layout()
     _save(fig, "fig_H5_03_subgroup_rmse.png")
 
@@ -199,7 +222,7 @@ def fig_normalization_effect(metrics: pd.DataFrame):
     ax.set_xticks(x)
     ax.set_xticklabels(DATASETS, fontsize=10)
     ax.set_ylabel("RMSE (cycles)", fontsize=10)
-    ax.set_title("H2 — Normalization Effect: N1 vs N3 vs N7", fontsize=12)
+    ax.set_title("RMSE: Fleet MinMax (N1) vs Per-Unit (N3) vs RevIN (N7)", fontsize=10)
     ax.legend(fontsize=9)
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -212,9 +235,8 @@ def fig_normalization_effect(metrics: pd.DataFrame):
 
 def fig_statistical_test(stat: pd.DataFrame):
     comparators = ["N2", "N3", "N4", "N5", "N6", "N7"]
-    labels      = [NORM_LABELS.get(n, n).replace("\n", " ") for n in comparators]
 
-    fig, axes = plt.subplots(1, len(DATASETS), figsize=(14, 4), sharey=True)
+    fig, axes = plt.subplots(1, len(DATASETS), figsize=(10, 4), sharey=True)
 
     for ax, ds in zip(axes, DATASETS):
         sub = stat[stat["dataset"] == ds].set_index("norm_id")
@@ -225,34 +247,27 @@ def fig_statistical_test(stat: pd.DataFrame):
             if np.isnan(p):
                 colors.append("lightgray")
             elif p < 0.05:
-                colors.append("#2ca02c")   # significant: green
+                colors.append("#009E73")   # significant: bluish-green
             else:
-                colors.append("#d62728")   # not significant: red
+                colors.append("#D55E00")   # not significant: vermilion
 
-        bars = ax.bar(range(len(comparators)), pvals, color=colors, alpha=0.85)
-        ax.axhline(0.05, color="black", linestyle="--", linewidth=1,
-                   label="α=0.05")
+        ax.bar(range(len(comparators)), pvals, color=colors, alpha=0.85)
+        ax.axhline(0.05, color="black", linestyle="--", linewidth=1.2)
         ax.set_title(ds, fontsize=10)
         ax.set_xticks(range(len(comparators)))
         ax.set_xticklabels(comparators, rotation=0, fontsize=8)
         ax.set_ylim(0, 1.05)
-        ax.grid(axis="y", alpha=0.3)
         if ds == DATASETS[0]:
             ax.set_ylabel("p-value (BH-FDR adjusted)", fontsize=9)
 
-    # Legend patches — placed inside last subplot (FD004 bars are near 0, top area free)
     from matplotlib.patches import Patch
     legend_elems = [
-        Patch(facecolor="#2ca02c", label="p_BH < 0.05 (significant)"),
-        Patch(facecolor="#d62728", label="p_BH ≥ 0.05"),
-        plt.Line2D([0], [0], color="black", linestyle="--", label="α=0.05"),
+        Patch(facecolor="#009E73", label="p < 0.05 (significant)"),
+        Patch(facecolor="#D55E00", label="p ≥ 0.05"),
+        plt.Line2D([0], [0], color="black", linestyle="--", label="α = 0.05"),
     ]
-    axes[-1].legend(handles=legend_elems, loc="upper right", fontsize=8, framealpha=0.9)
-    # Title embedded via fig.text for precise placement above tight_layout area
-    fig.tight_layout(rect=[0, 0, 1, 0.91])
-    fig.text(0.5, 0.97, "Fig. 5 — BH-FDR Adjusted p-values vs N1 Baseline (H2)",
-             ha="center", va="top", fontsize=12, fontweight="bold",
-             transform=fig.transFigure)
+    axes[-1].legend(handles=legend_elems, loc="upper right", fontsize=8, framealpha=0.85)
+    fig.tight_layout()
     _save(fig, "fig_H5_05_statistical_test.png")
 
 
@@ -261,6 +276,7 @@ def fig_statistical_test(stat: pd.DataFrame):
 # ---------------------------------------------------------------------------
 
 def main():
+    set_ress_style()
     metrics  = load_metrics()
     subgroup = load_subgroup()
     stat     = load_stat()
