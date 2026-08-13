@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-H2 Hypothesis - Visualisation
+H1 Hypothesis - Visualisation
 Creates 4 publication-quality figures:
   fig_H2_01_rmse_heatmap.png      -- RMSE heatmap (datasets x clips)
   fig_H2_02_nasa_heatmap.png      -- NASA Score heatmap
@@ -92,7 +92,7 @@ def fig_rmse_heatmap(df_metrics):
     cbar = fig.colorbar(im, ax=ax, shrink=0.85)
     cbar.set_label('RMSE (cycles)', rotation=270, labelpad=14)
 
-    ax.set_title('H2: RMSE by Dataset and Clipping Threshold\n(LinearRegression, last-row features)')
+    ax.set_title('H1: RMSE by Dataset and Clipping Threshold\n(LinearRegression, last-row features)')
     ax.set_xlabel('Clipping Threshold')
     ax.set_ylabel('Dataset')
     fig.tight_layout()
@@ -131,7 +131,7 @@ def fig_nasa_heatmap(df_metrics):
     cbar = fig.colorbar(im, ax=ax, shrink=0.85)
     cbar.set_label('Mean NASA Score (per engine, lower=better)', rotation=270, labelpad=18)
 
-    ax.set_title('H2: Mean NASA Score by Dataset and Clipping Threshold')
+    ax.set_title('H1: Mean NASA Score by Dataset and Clipping Threshold')
     ax.set_xlabel('Clipping Threshold')
     ax.set_ylabel('Dataset')
     fig.tight_layout()
@@ -190,7 +190,7 @@ def fig_subgroup_rmse(df_metrics):
         if idx == 0:
             ax.legend(title='Lifetime Group', fontsize=8, title_fontsize=9)
 
-    fig.suptitle('H2: RMSE by Lifetime Group and Clipping Threshold',
+    fig.suptitle('H1: RMSE by Lifetime Group and Clipping Threshold',
                  fontsize=14, fontweight='bold', y=1.01)
     fig.tight_layout()
 
@@ -242,7 +242,7 @@ def fig_pvalue_plot(df_stats):
     ax.set_xticklabels(DATASETS, fontsize=11)
     ax.set_ylabel('Wilcoxon p-value (two-sided)')
     ax.set_xlabel('Dataset')
-    ax.set_title('H2: Wilcoxon Rank-Sum p-values\n(clip_X vs clip_125 baseline, per-engine RMSE distribution)')
+    ax.set_title('H1: Wilcoxon Rank-Sum p-values\n(clip_X vs clip_125 baseline, per-engine RMSE distribution)')
     ax.set_ylim(0, max(ax.get_ylim()[1], 0.15))
     ax.legend(fontsize=9, loc='upper right')
     fig.tight_layout()
@@ -284,6 +284,6 @@ def main():
 
 if __name__ == '__main__':
     print("=" * 70)
-    print("H2 Visualisation")
+    print("H1 Visualisation")
     print("=" * 70)
     main()

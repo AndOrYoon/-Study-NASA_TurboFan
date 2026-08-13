@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+import sys
+sys.stdout.reconfigure(encoding='utf-8')
 """
-H6 Phase 3 — Generate Figures
+H3 Phase 3 — Generate Figures
 fig_H6_01_model_comparison.png  — RMSE bar chart M0/M1/M2/M3 for FD003 & FD004
 fig_H6_02_ablation_silhouette.png — Silhouette comparison by variant
 fig_H6_03_cluster_profiles.png  — Sensor s15 & s7 mean trend by cluster
@@ -35,7 +37,7 @@ def fig_model_comparison():
 
     df  = pd.read_csv(cmp_path)
     fig, axes = plt.subplots(1, 2, figsize=(12, 5), sharey=False)
-    fig.suptitle("H6: Multi-Branch LSTM — RMSE by Model", fontsize=14)
+    fig.suptitle("H3: Multi-Branch LSTM — RMSE by Model", fontsize=14)
 
     for ax, dataset in zip(axes, DATASETS):
         sub  = df[df["dataset"] == dataset]
@@ -75,9 +77,10 @@ def fig_ablation_silhouette():
         return
 
     df  = pd.read_csv(sil_path)
+    df["dataset"] = df["dataset"].str.upper()   # normalise fd003→FD003
     fig, axes = plt.subplots(1, 2, figsize=(11, 4), sharey=True)
-    fig.suptitle("H6: Clustering Silhouette by Feature Variant", fontsize=13)
-    variants = df["variant"].unique()
+    fig.suptitle("H3: Clustering Silhouette by Feature Variant", fontsize=13)
+    variants = ["AB_full", "AB_slope", "AB_late"]   # fixed order
     v_colors = {"AB_full": "#1f77b4", "AB_slope": "#ff7f0e", "AB_late": "#2ca02c"}
 
     for ax, dataset in zip(axes, DATASETS):
@@ -103,7 +106,7 @@ def fig_ablation_silhouette():
 
 def fig_cluster_profiles():
     fig, axes = plt.subplots(2, 2, figsize=(12, 8))
-    fig.suptitle("H6: Sensor Mean Trajectories by Cluster", fontsize=13)
+    fig.suptitle("H3: Sensor Mean Trajectories by Cluster", fontsize=13)
 
     for row_idx, dataset in enumerate(DATASETS):
         assign_path = os.path.join(RESULTS_DIR, f"cluster_assignments_{dataset.lower()}.csv")

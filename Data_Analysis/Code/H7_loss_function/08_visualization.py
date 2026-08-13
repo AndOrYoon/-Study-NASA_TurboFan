@@ -1,5 +1,5 @@
 """
-H7 Phase 8 — Visualization
+H4 Phase 8 — Visualization
 Generates 6 figures from Phase 2b results.
 """
 
@@ -20,7 +20,7 @@ from config_h7 import RESULT_DIR, FIGURES_DIR, LOSS_NAMES, DATASETS
 MATRIX_CSV = os.path.join(RESULT_DIR, "phase2b_results_matrix.csv")
 
 print("=" * 60)
-print("H7 Visualization")
+print("H4 Visualization")
 print("=" * 60)
 
 if not os.path.exists(MATRIX_CSV):
@@ -103,7 +103,7 @@ for ax, ds in zip(axes, DATASETS):
 handles, labels = axes[-1].get_legend_handles_labels()
 fig.legend(handles, labels, loc="upper right", fontsize=8, ncol=1,
            bbox_to_anchor=(1.12, 0.95))
-fig.suptitle("H7 Clip × Loss Interaction Effect (NASA Score)", fontsize=12)
+fig.suptitle("H4 Clip × Loss Interaction Effect (NASA Score)", fontsize=12)
 fig.tight_layout()
 fname = os.path.join(FIGURES_DIR, "fig_H7_05_clip_loss_interaction.png")
 fig.savefig(fname, dpi=150, bbox_inches="tight")
@@ -165,7 +165,7 @@ for ax in axes:
             seen.add(l)
 fig.legend(handles_all, labels_all, loc="upper right", fontsize=7, ncol=1,
            bbox_to_anchor=(1.10, 0.95))
-fig.suptitle("H7 Pareto Frontier: RMSE vs NASA Score", fontsize=12)
+fig.suptitle("H4 Pareto Frontier: RMSE vs NASA Score", fontsize=12)
 fig.tight_layout()
 fname = os.path.join(FIGURES_DIR, "fig_H7_06_pareto_frontier.png")
 fig.savefig(fname, dpi=150, bbox_inches="tight")

@@ -1,25 +1,25 @@
 # III. Methodology
 
-> **Draft status:** v1.1 — 2026-07-09 (target venue updated to RESS; table renumbering applied)
+> **Draft status:** v1.2 — 2026-08-12 (K=6 선택 근거 명시; RevIN 역변환 이유 수정 "dimensionally distinct" → global degradation trend 소거; LSTM 백본 선택 3가지 근거 단락 추가)
 > **Style:** Elsevier single-column (elsarticle, review mode) — Markdown source; compiled to LaTeX via build_ress_latex.py
 
 ---
 
 ## A. Dataset
 
-We use the NASA CMAPSS benchmark, which comprises four sub-datasets (FD001–FD004) simulating turbofan engine run-to-failure under varying operating conditions and fault modes (Table I). Each dataset records 21 raw sensor channels per flight cycle together with a held-out test set and ground-truth RUL values for the final observation of each test engine.
+We used the NASA CMAPSS benchmark, which comprises four sub-datasets (FD001–FD004) simulating turbofan engine run-to-failure under varying operating conditions and fault modes (Table I). Each dataset records 21 raw sensor channels per flight cycle together with a held-out test set and ground-truth RUL values for the final observation of each test engine.
 
 ---
 
 ## B. Data Preprocessing
 
-Seven constant-variance sensor channels are removed per dataset. For FD001 and FD003, sensors s1, s5, s6, s10, s16, s18, and s19 are discarded, leaving 14 input features; for FD002 and FD004, only s16 is constant, yielding 20 features. RUL targets follow a piecewise-linear formulation: for each training engine, cycles where the remaining life exceeds a clipping threshold τ receive a constant label of τ, while the final segment decreases linearly to zero. We evaluate five clipping values (τ ∈ {75, 100, 125, 130, ∞}), with τ = 125 cycles serving as the standard baseline per established literature [5, 6]. Ground-truth test RUL values are provided directly by the benchmark; no RUL estimation is performed at evaluation time.
+Seven constant-variance sensor channels were removed per dataset. For FD001 and FD003, sensors s1, s5, s6, s10, s16, s18, and s19 were discarded, leaving 14 input features; for FD002 and FD004, only s16 is constant, yielding 20 features. RUL targets followed a piecewise-linear formulation: for each training engine, cycles where the remaining life exceeds a clipping threshold τ receive a constant label of τ, while the final segment decreases linearly to zero. We evaluated five clipping values (τ ∈ {75, 100, 125, 130, ∞}), with τ = 125 cycles serving as the standard baseline per established literature [5, 6]. Ground-truth test RUL values are provided directly by the benchmark; no RUL estimation was performed at evaluation time.
 
 ---
 
 ## C. Operating-Condition Residualization
 
-FD002 and FD004 contain six discrete operating conditions that shift absolute sensor levels by tens to hundreds of units. We apply K-means residualization to decouple degradation signals from operating-point offsets. A K-means model (k = 6) is fitted on the three operating-condition variables (op1, op2, op3) of the training set using standardised inputs; per-cluster sensor means are computed from training data only and subtracted from each observation:
+FD002 and FD004 contain six discrete operating conditions that shift absolute sensor levels by tens to hundreds of units. We applied K-means residualization to decouple degradation signals from operating-point offsets. A K-means model (k = 6, matching the six known discrete operating conditions present in FD002 and FD004) was fitted on the three operating-condition variables (op1, op2, op3) of the training set using standardised inputs; per-cluster sensor means were computed from training data only and subtracted from each observation:
 
 $$z_{i,j} = x_{i,j} - \mu_{c(i),\,j}$$
 
@@ -27,9 +27,13 @@ where c(i) denotes the cluster assignment of cycle i and μ_{c,j} is the trainin
 
 ---
 
-## D. Normalization Strategies (H5)
+## D. Normalization Strategies (H2)
 
-We compare seven normalization strategies (N1–N7) to evaluate the effect of the reference-statistics choice. Fleet-level methods compute statistics across all training engines: N1 applies min-max scaling to [0, 1] and N2 applies z-score standardisation. Per-unit methods (N3–N6) use each engine's own early-cycle observations as the reference baseline, thereby removing initial-condition offsets before any degradation signal is visible: N3 applies min-max over the first 5 cycles, N4 over the first 10 cycles, N5 applies z-score over the first 5 cycles, and N6 over the first 10 cycles. N7 implements Reversible Instance Normalization (RevIN; Kim et al., 2022 [23]) as a learnable module within the model, normalising each 30-cycle inference window by its instantaneous mean and standard deviation and applying trainable affine parameters (γ, β); because the RUL output is a scalar rather than a sensor-space signal, no denormalization is applied to the prediction. This is intentional and architecturally correct: unlike time-series forecasting where the model output is in the same unit-space as the input (and RevIN's inverse transform would recover the original scale), the RUL prediction is a scalar in engine-cycle units that is dimensionally distinct from the input sensor features. Applying an inverse sensor-normalization transform to a cycle-unit output would be dimensionally incorrect. N7 therefore implements the forward (normalization) half of RevIN only, making it equivalent to per-window instance normalization with learnable affine parameters. N1 serves as the primary comparison baseline. All strategies are evaluated on the identical backbone with all other experimental factors fixed.
+We compared seven normalization strategies (N1–N7) to evaluate the effect of the reference-statistics choice. Fleet-level methods compute statistics across all training engines: N1 applies min-max scaling to [0, 1] and N2 applies z-score standardisation. Per-unit methods (N3–N6) use each engine's own early-cycle observations as the reference baseline, removing initial-condition offsets before any degradation signal is visible: N3 and N5 apply min-max and z-score over the first 5 cycles; N4 and N6 apply the same transforms over the first 10 cycles.
+
+N7 implements Reversible Instance Normalization (RevIN; Kim et al. [23]) as a learnable module within the model. Each 30-cycle inference window is normalised by its instantaneous mean and standard deviation, with trainable affine parameters (γ, β). The inverse transform is not applied to the scalar RUL output: applying per-window de-normalisation to a regression target would progressively erase the global degradation trend, because each 30-cycle window's instance statistics encode absolute degradation level rather than cycle-to-cycle deviations. N7 therefore implements the forward (normalisation) pass of RevIN only, making it equivalent to per-window instance normalisation with learnable affine parameters.
+
+N1 served as the primary comparison baseline. All strategies were evaluated on the identical backbone with all other experimental factors fixed.
 
 | ID | Name | Reference statistics |
 |----|------|---------------------|
@@ -45,25 +49,27 @@ We compare seven normalization strategies (N1–N7) to evaluate the effect of th
 
 ## E. LSTM Backbone Architectures
 
-H5 uses a compact LSTM backbone and H6/H7 use a full-capacity backbone; within each hypothesis, the backbone is held fixed so that observed differences reflect only the design factor under study. Each network takes a sliding window of 30 consecutive cycles as input and produces a scalar RUL estimate:
+The stacked LSTM was selected as the controlled backbone for this ablation for three reasons. First, LSTM-based models constitute the dominant baseline class in the CMAPSS RUL literature [5, 6, 9], making results directly comparable with prior single-factor studies. Second, a controlled ablation requires the backbone to remain fixed across conditions; substituting an attention-based encoder would conflate backbone capacity with the design factor under study, preventing clean attribution of observed differences. Third, pilot experiments in which the backbone was replaced with a Transformer encoder or a self-attention LSTM found that attention mechanisms perform fault-mode separation implicitly — rendering the explicit early-cycle GatingNet (M3) redundant — a finding that constitutes a separate research question rather than a controllable variable within the present study. The design-factor rankings established in §V.A therefore apply specifically to stacked LSTM architectures; whether and how the tier ordering changes for attention-based backbones is identified as a priority open question in §V.I.
+
+H2 used a compact LSTM backbone and H3/H4 used a full-capacity backbone; within each hypothesis, the backbone was held fixed so that observed differences reflected only the design factor under study. Each network takes a sliding window of 30 consecutive cycles as input and produces a scalar RUL estimate:
 
 ```
-H5 Backbone (compact):
-Input  (B × 30 × 18_or_14)
+H2 Backbone (compact):
+Input  (B × 30 × 17_or_18_or_23)
 → LSTM₁ (hidden=64, returns full sequence) → Dropout(0.2)
 → LSTM₂ (hidden=32, returns last time step) → Dropout(0.2)
 → Linear(32 → 16) → ReLU → Linear(16 → 1)
 
-H6/H7 Backbone (full-capacity):
+H3/H4 Backbone (full-capacity):
 Input  (B × 30 × 15_or_20)
 → LSTM₁ (hidden=64, returns full sequence) → Dropout(0.2)
 → LSTM₂ (hidden=64, returns last time step) → Dropout(0.2)
 → Linear(64 → 32) → ReLU → Linear(32 → 1)
 ```
 
-LSTM₁ passes its full sequence of hidden states to LSTM₂, preserving temporal context across layers. Test sequences shorter than 30 cycles are zero-padded at the front. Input dimensions vary by hypothesis and dataset; see Table III in Section H.
+LSTM₁ passes its full sequence of hidden states to LSTM₂, preserving temporal context across layers. Test sequences shorter than 30 cycles were zero-padded at the front. Input dimensions vary by hypothesis and dataset; see Table III in Section H.
 
-**Table II. Computational complexity of H6 architectures (FD003, F = 15 features).**
+**Table II. Computational complexity of H3 architectures (FD003, F = 15 features).**
 *Parameter counts verified by direct model inspection. FLOPs computed analytically per inference window (batch = 1, window = 30 cycles) using the standard LSTM FLOPs formula: 8 × (input + hidden) × hidden per timestep. Inference latency measured on NVIDIA RTX GPU (2,000 runs, batch = 1, after 200-run warm-up; mean ± std reported). Training time is GPU compute per epoch on FD003 (~13,600 training sequences, batch = 256), excluding data loading. M1 routes each test engine to a single branch via GMM argmax, so its inference FLOPs equal M0's.*
 
 | Model | Parameters | FLOPs / window | Inference (measured) | Training (GPU) |
@@ -77,17 +83,17 @@ LSTM₁ passes its full sequence of hidden states to LSTM₂, preserving tempora
 
 M3's GatingNet adds only 4.9K parameters above M1/M2 (< 5% overhead), confirming that the performance improvement is not attributable to additional model capacity. The approximately 2× parameter increase from M0 to M3 reflects the two independent prediction branches rather than the gating mechanism itself. All four architectures are well within the computational budget of embedded PHM controllers, which typically support models of up to several hundred thousand parameters.
 
-**Note:** The difference in backbone capacity means that H5 and H6/H7 RMSE values are not directly comparable in absolute terms. Each hypothesis is evaluated internally relative to its own controlled baseline.
+**Note:** The difference in backbone capacity means that H2 and H3/H4 RMSE values are not directly comparable in absolute terms. Each hypothesis is evaluated internally relative to its own controlled baseline.
 
 ---
 
-## F. Fault-Mode Architectures (H6)
+## F. Fault-Mode Architectures (H3)
 
-We compare four architectures on FD003 and FD004 to assess whether explicit fault-mode separation improves RUL accuracy.
+We compared four architectures on FD003 and FD004 to assess whether explicit fault-mode separation improves RUL accuracy.
 
 **M0 (Baseline)** is a single-branch model using the shared backbone without any fault-mode handling.
 
-**M1 (Hard Routing)** trains two independent LSTM branches. Each training engine is assigned deterministically to one branch via the argmax of its GMM posterior probability; test engines are routed identically. Branches are trained independently with standard MSE.
+**M1 (Hard Routing)** trains two independent LSTM branches. Each training engine was assigned deterministically to one branch via the argmax of its GMM posterior probability; test engines were routed identically. Branches were trained independently with standard MSE.
 
 **M2 (Soft Gating)** retains two branches but replaces hard assignment with a weighted sum:
 
@@ -105,9 +111,9 @@ The final prediction is $\hat{y}_{\text{final}} = w_0\hat{y}_0 + w_1\hat{y}_1$ w
 
 $$\mathcal{L}_{\text{M3}} = \text{MSE}(\hat{y}_{\text{final}},\, y) + 0.05\cdot\text{MSE}(\hat{y}_0,\, y) + 0.05\cdot\text{MSE}(\hat{y}_1,\, y)$$
 
-By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. To quantify M3's deployment robustness to GatingNet misclassification, we conduct a false-routing sensitivity analysis (§IV.C.2): gate weights are systematically perturbed — fully inverted (w₀ ↔ w₁), forced to Branch-0 only, or forced to Branch-1 only — and the resulting RMSE degradation is measured across all five seeds on FD003 and FD004. GatingNet confidence, defined as mean max(w₀, w₁) over the test set, is proposed as a post-training reliability indicator for routing deployment.
+By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. To quantify M3's deployment robustness to GatingNet misclassification, we conducted a false-routing sensitivity analysis (§IV.C.2): gate weights were systematically perturbed — fully inverted (w₀ ↔ w₁), forced to Branch-0 only, or forced to Branch-1 only — and the resulting RMSE degradation was measured across all five seeds on FD003 and FD004. GatingNet confidence, defined as mean max(w₀, w₁) over the test set, is proposed as a post-training reliability indicator for routing deployment.
 
-For M1 and M2, GMM cluster assignments (k = 2, full covariance) are derived by unsupervised fitting on degradation-slope features of seven discriminant sensors identified by EDA (s15, s20, s21, s7, s12, s2, s4). The inter-cluster discriminability of each sensor is quantified by its inter-cluster z-score:
+For M1 and M2, GMM cluster assignments (k = 2, full covariance) were derived by unsupervised fitting on degradation-slope features of seven discriminant sensors identified by EDA (s15, s20, s21, s7, s12, s2, s4). The inter-cluster discriminability of each sensor is quantified by its inter-cluster z-score:
 
 $$|\Delta z|_j = \frac{|\bar{\mu}_{c=1,j} - \bar{\mu}_{c=2,j}|}{\sigma_{\text{fleet},j}}$$
 
@@ -115,9 +121,9 @@ where $\bar{\mu}_{c,j}$ is the training-set mean of sensor $j$ within cluster $c
 
 ---
 
-## G. Loss Functions (H7)
+## G. Loss Functions (H4)
 
-We evaluate seven training loss functions to determine whether asymmetric or dynamically weighted objectives improve over standard MSE. All functions share the signature `loss(pred, true, life_ratio=None)`, where life_ratio = 1 − RUL/RUL_max is a training-time weighting signal computed from training-set cycle counts only; it is set to None at inference time, eliminating any dependency on unknown test-set engine lifetimes.
+We evaluated seven training loss functions to determine whether asymmetric or dynamically weighted objectives improve over standard MSE. All functions share the signature `loss(pred, true, life_ratio=None)`, where life_ratio = 1 − RUL/RUL_max is a training-time weighting signal computed from training-set cycle counts only; it is set to None at inference time, eliminating any dependency on unknown test-set engine lifetimes.
 
 | ID | Name | Key formulation |
 |----|------|----------------|
@@ -129,13 +135,13 @@ We evaluate seven training loss functions to determine whether asymmetric or dyn
 | L6 | Pinball | τ·max(0, y−ŷ) + (1−τ)·max(0, ŷ−y); τ = 0.25 |
 | L7 | HubA | Huber(δ=20) · w_asym; λ_a = 3 |
 
-For L5 (TWA), w_time = 1 + λ_t · r and w_asym = 1 if d < 0, else λ_a. For L7, w_asym = 1 if d < 0, else λ_a, where d = ŷ − y. Key hyperparameters (τ, λ_t, λ_a, δ) were selected via grid search on FD001 before cross-dataset evaluation. FD001 therefore functions as a partially tuned evaluation dataset for H7; nominally strong FD001-specific effects (particularly L5 and L7) should be interpreted with this caveat. BH-FDR correction across all four datasets partially mitigates this optimism.
+For L5 (TWA), w_time = 1 + λ_t · r and w_asym = 1 if d < 0, else λ_a. For L7, w_asym = 1 if d < 0, else λ_a, where d = ŷ − y. Key hyperparameters (τ, λ_t, λ_a, δ) were selected via grid search on FD001 before cross-dataset evaluation. FD001 therefore functions as a partially tuned evaluation dataset for H4; nominally strong FD001-specific effects (particularly L5 and L7) should be interpreted with this caveat. BH-FDR correction across all four datasets partially mitigates this optimism.
 
 ---
 
 ## H. Training Configuration
 
-All models are optimised with Adam (learning rate 1×10⁻³, weight decay 1×10⁻⁴) with a batch size of 256, for a maximum of 100 epochs. Early stopping monitors validation loss with patience of 15 epochs and restores the best-performing checkpoint. The validation set is constructed by engine-level holdout: 20% of training engines are withheld, and all cycles of those engines are excluded from training. This prevents the RUL distribution mismatch that arises from cycle-level splitting. Each experimental configuration is run with five random seeds (0, 1, 2, 3, 4); results are reported as mean ± standard deviation across seeds.
+All models were optimised with Adam (learning rate 1×10⁻³, weight decay 1×10⁻⁴) with a batch size of 256, for a maximum of 100 epochs. Early stopping monitored validation loss with patience of 15 epochs and restored the best-performing checkpoint. The validation set was constructed by engine-level holdout: 20% of training engines were withheld, and all cycles of those engines were excluded from training. This prevented the RUL distribution mismatch that arises from cycle-level splitting. Each experimental configuration was run with five random seeds (0, 1, 2, 3, 4); results are reported as mean ± standard deviation across seeds.
 
 | Hyperparameter | Value |
 |----------------|-------|
@@ -155,18 +161,18 @@ The feature set and validation-split method differ across hypotheses, as shown i
 
 | Hypothesis | Feature set | Val split method | Backbone |
 |-----------|------------|-----------------|---------|
-| H2 | Sensors + op cols (Ridge) | N/A (deterministic Ridge) | Ridge regression |
-| H5 | Sensors + op cols (incl. op1/op2/op3) | Last 20% by unit ID (deterministic) | Compact LSTM (LSTM₂ hidden=32) |
-| H6 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
-| H7 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
+| H1 | Sensors + op cols (Ridge) | N/A (deterministic Ridge) | Ridge regression |
+| H2 | Sensors + op cols (incl. op1/op2/op3) | Last 20% by unit ID (deterministic) | Compact LSTM (LSTM₂ hidden=32) |
+| H3 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
+| H4 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
 
-For H5 the resulting input dimension F is 17 (FD001: 14 sensors + 3 op), 18 (FD003: 15 sensors + 3 op), or 23 (FD002/FD004 after residualisation: 20 sensors + 3 op). For H6/H7 F is 14 (FD001), 15 (FD003), or 20 (FD002/FD004 after residualisation). **Note:** The feature and split differences between H5 and H6 reflect independent implementation choices made prior to analysis; they mean that the two hypotheses are not directly cross-comparable in absolute RMSE terms. Each hypothesis is interpreted relative to its own baseline condition.
+For H2 the resulting input dimension F is 17 (FD001: 14 sensors + 3 op), 18 (FD003: 15 sensors + 3 op), or 23 (FD002/FD004 after residualisation: 20 sensors + 3 op). For H3/H4 F is 14 (FD001), 15 (FD003), or 20 (FD002/FD004 after residualisation). **Note:** The feature and split differences between H2 and H3 reflect independent implementation choices made prior to analysis; they mean that the two hypotheses are not directly cross-comparable in absolute RMSE terms. Each hypothesis is interpreted relative to its own baseline condition.
 
 ---
 
 ## I. Evaluation Metrics
 
-Two metrics are reported across all experiments. RMSE is the primary performance indicator:
+Two metrics were reported across all experiments. RMSE is the primary performance indicator:
 
 $$\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(\hat{y}_i - y_i)^2}$$
 
@@ -180,10 +186,10 @@ where d = ŷ − y and N is the number of test engines. NASA Score is lower-is-b
 
 ## J. Statistical Testing
 
-Statistical comparisons differ in sample unit by hypothesis. For H2 (Ridge regression, deterministic), comparisons use a two-sided Mann-Whitney U test (`scipy.stats.ranksums`) on per-engine RMSE values (N ≈ 100–259 per dataset; see §III.K). For H5, H6, and H7 (LSTM, stochastic), comparisons use one-sided Wilcoxon rank-sum tests on per-seed aggregate metrics (N = 5), testing whether the treatment condition improves over baseline. All tests use α = 0.05 before correction. When multiple treatment conditions are compared simultaneously within one hypothesis, raw p-values are corrected using the Benjamini-Hochberg (BH) procedure at α_FDR = 0.05. A result is considered statistically meaningful when both p_BH < 0.05 **and** Cohen's d ≥ 0.3 (small effect threshold). Conditions satisfying the p-value criterion but yielding |d| < 0.1 are reported as "statistically significant but practically negligible" to distinguish statistical from practical significance. For context, a Cohen's d of 0.3 at the FD001 RMSE baseline of approximately 14–16 cycles corresponds to a mean RMSE difference of approximately 0.6–1.0 cycles — a gap comparable to one cycle of maintenance scheduling uncertainty in typical PHM deployment contexts.
+Statistical comparisons differed in sample unit by hypothesis. For H1 (Ridge regression, deterministic), comparisons used a two-sided Mann-Whitney U test (`scipy.stats.ranksums`) on per-engine RMSE values (N ≈ 100–259 per dataset; see §III.K). For H2, H3, and H4 (LSTM, stochastic), comparisons used one-sided Wilcoxon rank-sum tests on per-seed aggregate metrics (N = 5), testing whether the treatment condition improves over baseline. All tests used α = 0.05 before correction. When multiple treatment conditions are compared simultaneously within one hypothesis, raw p-values were corrected using the Benjamini-Hochberg (BH) procedure at α_FDR = 0.05. A result was considered statistically meaningful when both p_BH < 0.05 **and** Cohen's d ≥ 0.3 (small effect threshold). Conditions satisfying the p-value criterion but yielding |d| < 0.1 are reported as "statistically significant but practically negligible" to distinguish statistical from practical significance. For context, a Cohen's d of 0.3 at the FD001 RMSE baseline of approximately 14–16 cycles corresponds to a mean RMSE difference of approximately 0.6–1.0 cycles — a gap comparable to one cycle of maintenance scheduling uncertainty in typical PHM deployment contexts.
 
 ---
 
-## K. H2 Baseline Model (Ridge Regression)
+## K. H1 Baseline Model (Ridge Regression)
 
-The RUL clipping study (H2) uses `sklearn.linear_model.LinearRegression` with L2 regularisation (Ridge, default α = 1.0) as its predictive model. Ridge regression was chosen to isolate the effect of label engineering from non-linear model capacity: the clipping threshold's effect on RUL label distribution is architecture-independent, and a deterministic closed-form baseline eliminates random-initialisation variance. Each of the 20 experimental configurations (5 clip values × 4 datasets) is run exactly once; the model has no random state and produces identical results on identical data. The Wilcoxon comparison for H2 uses the Mann-Whitney U test (`scipy.stats.ranksums`, unpaired, two-sided) on per-engine RMSE values (N ≈ 100–259 per dataset depending on sub-dataset). Note that this is technically an unpaired test; a paired Wilcoxon signed-rank test would be marginally more statistically efficient since the same test engines are evaluated under both clip conditions, and this limitation should be borne in mind when interpreting H2 significance levels.
+The RUL clipping study (H1) used `sklearn.linear_model.LinearRegression` with L2 regularisation (Ridge, default α = 1.0) as its predictive model. Ridge regression was chosen to isolate the effect of label engineering from non-linear model capacity: the clipping threshold's effect on RUL label distribution is architecture-independent, and a deterministic closed-form baseline eliminates random-initialisation variance. Each of the 20 experimental configurations (5 clip values × 4 datasets) was run exactly once; the model has no random state and produces identical results on identical data. The Wilcoxon comparison for H1 used the Mann-Whitney U test (`scipy.stats.ranksums`, unpaired, two-sided) on per-engine RMSE values (N ≈ 100–259 per dataset depending on sub-dataset). Note that this is technically an unpaired test; a paired Wilcoxon signed-rank test would be marginally more statistically efficient since the same test engines are evaluated under both clip conditions, and this limitation should be borne in mind when interpreting H1 significance levels.

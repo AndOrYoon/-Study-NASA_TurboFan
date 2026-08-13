@@ -2,7 +2,7 @@
 """
 06_visualize.py
 ---------------
-Generate five figures for H5 normalisation comparison.
+Generate five figures for H2 normalisation comparison.
 
 Figures saved to:
   Results/H5_normalization/figures/
@@ -103,7 +103,7 @@ def fig_rmse_heatmap(metrics: pd.DataFrame):
         linewidths=0.5, ax=ax,
         cbar_kws={"label": "RMSE (cycles)"},
     )
-    ax.set_title("H5 — RMSE by Normalizer × Dataset (mean over 5 seeds)",
+    ax.set_title("H2 — RMSE by Normalizer × Dataset (mean over 5 seeds)",
                  fontsize=12, pad=10)
     ax.set_xlabel("Dataset", fontsize=10)
     ax.set_ylabel("Normalizer", fontsize=10)
@@ -128,7 +128,7 @@ def fig_nasa_heatmap(metrics: pd.DataFrame):
         linewidths=0.5, ax=ax,
         cbar_kws={"label": "NASA Score (lower = better)"},
     )
-    ax.set_title("H5 — NASA Prognostic Score by Normalizer × Dataset",
+    ax.set_title("H2 — NASA Prognostic Score by Normalizer × Dataset",
                  fontsize=12, pad=10)
     ax.set_xlabel("Dataset", fontsize=10)
     ax.set_ylabel("Normalizer", fontsize=10)
@@ -165,7 +165,7 @@ def fig_subgroup_rmse(subgroup: pd.DataFrame):
         ax.legend(title="Dataset", fontsize=7, title_fontsize=7)
         ax.grid(axis="y", alpha=0.3)
 
-    fig.suptitle("H5 — Subgroup RMSE by Lifetime Group", fontsize=12, y=1.01)
+    fig.suptitle("H2 — Subgroup RMSE by Lifetime Group", fontsize=12, y=1.01)
     fig.tight_layout()
     _save(fig, "fig_H5_03_subgroup_rmse.png")
 
@@ -199,7 +199,7 @@ def fig_normalization_effect(metrics: pd.DataFrame):
     ax.set_xticks(x)
     ax.set_xticklabels(DATASETS, fontsize=10)
     ax.set_ylabel("RMSE (cycles)", fontsize=10)
-    ax.set_title("H5 — Normalization Effect: N1 vs N3 vs N7", fontsize=12)
+    ax.set_title("H2 — Normalization Effect: N1 vs N3 vs N7", fontsize=12)
     ax.legend(fontsize=9)
     ax.grid(axis="y", alpha=0.3)
     fig.tight_layout()
@@ -240,16 +240,19 @@ def fig_statistical_test(stat: pd.DataFrame):
         if ds == DATASETS[0]:
             ax.set_ylabel("p-value (BH-FDR adjusted)", fontsize=9)
 
-    # Legend patches
+    # Legend patches — placed inside last subplot (FD004 bars are near 0, top area free)
     from matplotlib.patches import Patch
     legend_elems = [
         Patch(facecolor="#2ca02c", label="p_BH < 0.05 (significant)"),
         Patch(facecolor="#d62728", label="p_BH ≥ 0.05"),
         plt.Line2D([0], [0], color="black", linestyle="--", label="α=0.05"),
     ]
-    fig.legend(handles=legend_elems, loc="upper right", fontsize=8)
-    fig.suptitle("H5 — BH-FDR Adjusted p-values  (vs N1 baseline)", fontsize=12)
-    fig.tight_layout()
+    axes[-1].legend(handles=legend_elems, loc="upper right", fontsize=8, framealpha=0.9)
+    # Title embedded via fig.text for precise placement above tight_layout area
+    fig.tight_layout(rect=[0, 0, 1, 0.91])
+    fig.text(0.5, 0.97, "Fig. 5 — BH-FDR Adjusted p-values vs N1 Baseline (H2)",
+             ha="center", va="top", fontsize=12, fontweight="bold",
+             transform=fig.transFigure)
     _save(fig, "fig_H5_05_statistical_test.png")
 
 

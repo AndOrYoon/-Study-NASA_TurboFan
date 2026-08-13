@@ -19,7 +19,7 @@ Specifically:
 - The research was conducted as independent academic work at the Electronics and
   Telecommunications Research Institute (ETRI), Daejeon, South Korea.
 
-Author: [Author Name]
+Author: Young Seog Yoon
 Affiliation: Electronics and Telecommunications Research Institute (ETRI),
              Daejeon, South Korea
 

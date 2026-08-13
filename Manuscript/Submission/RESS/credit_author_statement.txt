@@ -1,6 +1,6 @@
 CRediT Author Contribution Statement
 
-[Author Name], Electronics and Telecommunications Research Institute (ETRI),
+Young Seog Yoon, Electronics and Telecommunications Research Institute (ETRI),
 Daejeon, South Korea: Conceptualization, Data curation, Formal analysis,
 Investigation, Methodology, Project administration, Software, Validation,
 Visualization, Writing – original draft, Writing – review & editing.
@@ -64,7 +64,7 @@ Writing – review & editing
                      against RESS scope and IEEE TII style guides.
 
 ---
-SUBMISSION NOTE: Replace "[Author Name]" with the submitting author's full name
+SUBMISSION NOTE: Replace "Young Seog Yoon" with the submitting author's full name
 before uploading to the RESS Editorial Manager. The summary paragraph at the top
 (before the dashed line) is the text to paste into the CRediT field. The role-by-
 role detail block below is for internal reference only and should not appear in
