@@ -31,7 +31,7 @@ where c(i) denotes the cluster assignment of cycle i and μ_{c,j} is the trainin
 
 Seven normalization strategies (N1–N7) were compared to evaluate the effect of the reference-statistics choice. Fleet-level methods compute statistics across all training engines: N1 applies min-max scaling to [0, 1] and N2 applies z-score standardisation. Per-unit methods (N3–N6) use each engine's own early-cycle observations as the reference baseline, removing initial-condition offsets before any degradation signal is visible: N3 and N5 apply min-max and z-score over the first 5 cycles; N4 and N6 apply the same transforms over the first 10 cycles.
 
-N7 implements Reversible Instance Normalization (RevIN; Kim et al. [23]) as a learnable module within the model. Each 30-cycle inference window is normalised by its instantaneous mean and standard deviation, with trainable affine parameters (γ, β). The inverse transform is not applied to the scalar RUL output: RevIN's inverse adds back the window's instance mean and scales by its standard deviation — operations designed to restore multi-step sensor forecasts to their original measurement units. For scalar RUL regression, however, the window's instance mean decreases as the engine degrades (sensor readings shift systematically with health deterioration); applying the inverse transform would therefore impose a sensor-level offset on each RUL prediction that changes with degradation state, partially cancelling the downward trajectory the model is learning. N7 therefore implements the forward (normalisation) pass of RevIN only, making it equivalent to per-window instance normalisation with learnable affine parameters.
+N7 implements a forward-only variant of Reversible Instance Normalization (RevIN; Kim et al. [23]) as a learnable module within the model. Each 30-cycle inference window is normalised by its instantaneous mean and standard deviation, with trainable affine parameters (γ, β). The inverse transform is not applied to the scalar RUL output: RevIN's inverse adds back the window's instance mean and scales by its standard deviation — operations designed to restore multi-step sensor forecasts to their original measurement units. For scalar RUL regression, however, the window's instance mean decreases as the engine degrades (sensor readings shift systematically with health deterioration); applying the inverse transform would therefore impose a sensor-level offset on each RUL prediction that changes with degradation state, partially cancelling the downward trajectory the model is learning. N7 therefore implements the forward (normalisation) pass of RevIN only, making it equivalent to per-window instance normalisation with learnable affine parameters.
 
 N1 served as the primary comparison baseline. All strategies were evaluated on the identical backbone with all other experimental factors fixed.
 
@@ -43,7 +43,7 @@ N1 served as the primary comparison baseline. All strategies were evaluated on t
 | N4 | Per-unit min-max (10 cy) | Engine's first 10 cycles |
 | N5 | Per-unit z-score (5 cy) | Engine's first 5 cycles |
 | N6 | Per-unit z-score (10 cy) | Engine's first 10 cycles |
-| N7 | RevIN (learnable) | Per-window, at inference |
+| N7 | RevIN-style fwd-only (learnable) | Per-window, at inference |
 
 ---
 
@@ -132,7 +132,7 @@ Seven training loss functions were evaluated to determine whether asymmetric or 
 | L3 | DynMSE | (1 + λ_dyn · r) · (ŷ−y)²; λ_dyn = 1.0 |
 | L4 | Focal-RUL | (‖ŷ−y‖/(‖ŷ−y‖+1))^γ · (ŷ−y)²; γ = 2 |
 | L5 | TWA | w_time · w_asym · (ŷ−y)²; λ_t = 10, λ_a = 1 |
-| L6 | Pinball | τ·max(0, y−ŷ) + (1−τ)·max(0, ŷ−y); τ = 0.25 |
+| L6 | Pinball | τ·max(0, y−ŷ) + (1−τ)·max(0, ŷ−y); τ = 0.35 (default); τ = 0.25 (FD001/FD003 grid search) |
 | L7 | HubA | Huber(δ=20) · w_asym; λ_a = 3 |
 
 For L5 (TWA), w_time = 1 + λ_t · r and w_asym = 1 if d < 0, else λ_a. For L7, w_asym = 1 if d < 0, else λ_a, where d = ŷ − y. Key hyperparameters (τ, λ_t, λ_a, δ) were selected via grid search on FD001 before cross-dataset evaluation. FD001 therefore functions as a partially tuned evaluation dataset for H4; nominally strong FD001-specific effects (particularly L5 and L7) should be interpreted with this caveat. BH-FDR correction across all four datasets partially mitigates this optimism.
