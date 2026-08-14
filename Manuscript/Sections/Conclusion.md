@@ -1,6 +1,6 @@
 # VI. Conclusion
 
-> **Draft status:** v1.2 — 2026-08-13 (We → 수동태 전환)
+> **Draft status:** v1.3 — 2026-08-14 (GPT리뷰 대응 P1: hierarchy→risk-priority ordering; cross-dataset ablation→cross-scenario evaluation)
 
 ---
 

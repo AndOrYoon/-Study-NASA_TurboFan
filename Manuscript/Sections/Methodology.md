@@ -1,6 +1,6 @@
 # III. Methodology
 
-> **Draft status:** v1.3 — 2026-08-13 (RevIN 역변환 메커니즘 명시 — window mean 감소로 RUL 궤적 상쇄 메커니즘 추가; We → 수동태 전환)
+> **Draft status:** v1.4 — 2026-08-14 (GPT리뷰 대응 P2: N7 RevIN → forward-only variant 명칭 + 테이블 수정; P3: Pinball τ=0.35 default / τ=0.25 FD001/FD003 grid search 명시)
 > **Style:** Elsevier single-column (elsarticle, review mode) — Markdown source; compiled to LaTeX via build_ress_latex.py
 
 ---

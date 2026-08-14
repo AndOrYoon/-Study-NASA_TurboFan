@@ -1,6 +1,6 @@
 # IV. Results
 
-> **Draft status:** v1.3 — 2026-08-13 (가독성 개선: H2/H3 FD003 baseline 차이 원인 명시; M0 std=0.18 메커니즘 설명; M1 FD004 cluster collapse 메커니즘 구체화; H4 power limitation 결과 앞으로 이동; We → 수동태 전환)
+> **Draft status:** v1.4 — 2026-08-14 (GPT리뷰 대응 P2: causal explanation→interpretation is supported; correct fault-specific branch→appropriate latent expert branch; RevIN-style forward normalization 명칭 적용)
 > **Models:** H1 = LinearRegression (deterministic, 20 runs); H2/H3/H4 = Stacked LSTM (5 seeds, mean ± std)
 > **Baseline:** clip = 125 cycles, Fleet min-max (N1), single-branch LSTM (M0), MSE (L1) throughout unless noted
 

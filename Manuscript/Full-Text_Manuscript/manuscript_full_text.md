@@ -5,7 +5,7 @@
 **Correspondence:** isay@etri.re.kr
 
 > **Compiled:** 2026-07-06  
-> **Last revised:** 2026-08-13 (가독성 개선 반영: RevIN 역변환 메커니즘 명시; H2 vs H3 FD003 baseline 수치 차이 원인 추가; M0 std=0.18 수렴 이유; M1 cluster collapse 메커니즘 구체화; H4 power limitation 결과 앞 배치; gate confidence ≥0.8 empirical basis 명시; §V.D generalizability paragraph 추가; We/our → This study / 수동태 전환 전면 적용)  
+> **Last revised:** 2026-08-14 (GPT리뷰 P1-3 대응: hierarchy→risk-priority ordering; cross-dataset→cross-scenario; RevIN→forward-only variant; causal→interpretation; 배치주장 완화; Pinball τ 명시; capacity control 문장 추가; M1_kprefix 실험 결과 §V.D 반영)  
 > **Status:** Complete draft — all sections revised and cross-checked for internal consistency  
 > **Source sections:** `Manuscript/Sections/` (Abstract_draft, Introduction, Methodology, Results, Discussion_Implication, Conclusion)  
 > **Section numbering note:** Sections are numbered I, III–VI; Section II (Related Work) is integrated into Sections I and V.

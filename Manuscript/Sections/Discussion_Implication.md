@@ -1,6 +1,6 @@
 # V. Discussion and Implications
 
-> **Draft status:** v1.4 — 2026-08-13 (gate confidence ≥0.8 n=2 empirical basis 명시; We/our → This study / 수동태 전환; §V.D generalizability paragraph 추가 — battery/motor 예시)
+> **Draft status:** v1.5 — 2026-08-14 (GPT리뷰 대응 P1-2: hierarchy→risk-priority ordering; cross-dataset→cross-scenario; causal→interpretation; RevIN→forward-only variant; 배치주장 완화; §V.D capacity control 논리 추가; M1_kprefix 실험 결과 반영 — FD003 42.54±0.37 ≈ M0, FD004 35.43±7.04 > M0; M3 우위는 routing 품질 확인)
 > *(v1.0 — 2026-07-03)*
 > **Relates to:** Sections III (Methodology) and IV (Results)
 > **Reference anchors:** [n] correspond to Manuscript/References.md numbering
