@@ -1,4 +1,4 @@
-# From Fleet Normalization to Fault-Mode Gating: A Cross-Dataset Ablation Study of Turbofan Remaining Useful Life Prediction
+# From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction
 
 **Authors:** Young Seog Yoon (ORCID: 0000-0003-3796-8480)
 **Affiliation:** Electronics and Telecommunications Research Institute (ETRI), Behavioral Intelligence for Autonomous Manufacturing Research Section, Daejeon, South Korea

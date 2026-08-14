@@ -3,7 +3,7 @@
 > **Draft status:** v1.5 — 2026-08-13 (We → This study 전환)
 
 **Title:**
-From Fleet Normalization to Fault-Mode Gating: A Cross-Dataset Ablation Study of Turbofan Remaining Useful Life Prediction
+From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction
 
 ---
 

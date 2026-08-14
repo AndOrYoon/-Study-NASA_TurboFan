@@ -149,7 +149,7 @@ def build():
     p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
     r2 = p2.add_run(
         "From Fleet Normalization to Fault-Mode Gating: "
-        "A Cross-Dataset Ablation Study of Turbofan Remaining Useful Life Prediction"
+        "A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction"
     )
     r2.italic = True
     r2.font.size = Pt(10)

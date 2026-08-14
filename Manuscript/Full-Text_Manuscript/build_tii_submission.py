@@ -118,7 +118,7 @@ def build():
     title_para = doc.add_paragraph(style='Title')
     title_para.add_run(
         "From Fleet Normalization to Fault-Mode Gating: "
-        "A Cross-Dataset Ablation Study of Turbofan "
+        "A Systematic Ablation Study of Turbofan "
         "Remaining Useful Life Prediction"
     )
 
