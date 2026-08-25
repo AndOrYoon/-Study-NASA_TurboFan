@@ -1,8 +1,9 @@
 # GPT Rephrasing Response — Author's Item-by-Item Assessment
 
 > **원본 검토 파일:** `Internal_Review/GPT_Rephrasing.md`
-> **작성일:** 2026-08-25
+> **작성일:** 2026-08-25 | **반영 완료:** 2026-08-26
 > **용도:** GPT 제안 50개에 대한 저자 수락·수정·거부 결정 및 최종 수정안
+> **상태:** P1(15) + P2(25) + P3(10) 전 항목 원고 반영 완료 — git commit d88287d
 
 ---
 
@@ -443,14 +444,17 @@ GPT 제안은 너무 간결하여 Conclusion의 마무리 문장으로 약하다
 
 ## 실행 체크리스트 (원고 반영 시)
 
-- [ ] **#48 삭제**: §V.H 경제 수치 문단 전체 제거
-- [ ] **#1 수정**: "safety-critical prerequisite" 표현 보정
-- [ ] **#3 수정**: "demonstrating" → "suggesting that each tier produced qualitatively larger effects than the tier below it" (backbone 차이는 §V.A에서 이미 처리됨, Contribution 재언급 불요)
-- [ ] **#4 수정**: 체크리스트 기여 유지하되 "safety-critical maintenance pipelines" 제거
-- [ ] **#5 수정**: ≥ 0.8 임계값을 탐색적 지표로 약화
-- [ ] **#36 수정**: "any safety-critical pipeline" → 해당 실험 결과로 한정
-- [ ] **#14, #15 수정**: 정보이론적 언어, 타 연구 클리핑 추정 제거
-- [ ] **#9, #10, #11–#13 수정**: CMAPSS 외 일반화 주장 제한
-- [ ] **P2 전반**: "establish" → "suggest/motivate", "confirm" → "observe", "directly" → "in the present experiments"
-- [ ] **#39 수정**: FMEA 유추 약화 ("conceptually analogous to", no formal equivalence)
-- [ ] **#50 수정**: Conclusion 마지막 문장 보정
+> **상태:** 전 항목 반영 완료 (2026-08-25~26). 반영 파일: manuscript_full_text.md, main.tex, Discussion_Implication.md, Sections/Conclusion.md, Sections/Abstract_draft.md, Sections/Introduction.md, Cover_Letter_RESS_draft.md, highlights.txt
+
+- [x] **#48 삭제**: §V.H 경제 수치 문단 전체 제거 → M3 RMSE 직접 정량화 문단으로 교체
+- [x] **#1 수정**: "safety-critical prerequisite" → "safety-relevant design decision" / "highlights the importance of"
+- [x] **#3 수정**: "demonstrating" → "suggesting that each tier produced qualitatively larger effects than the tier below it"
+- [x] **#4 수정**: 체크리스트 기여 유지, "safety-critical maintenance pipelines" 제거, ≥0.8/≥0.5 → "diagnostic indicators rather than calibrated thresholds"
+- [x] **#5 수정**: ≥ 0.8 임계값 처방 제거 → "gate confidence as an indicator of routing decisiveness" (탐색적 지표로 약화)
+- [x] **#36 수정**: "any safety-critical pipeline" → "constituting the most severe performance degradation observed across all experiment conditions"
+- [x] **#14, #15 수정**: "information-theoretic reading" → "One possible interpretation"; 타 연구 클리핑 추정 인과 표현 제거
+- [x] **#9, #10, #11–#13 수정**: "any multi-fault PHM system" → "may be worth investigating in other PHM applications"; "can be applied directly" → "could be evaluated as candidate indicators"
+- [x] **P2 전반**: "establish" → "suggest", "confirm" → "observe", "directly" → "in the present experiments" 전반 반영
+- [x] **#39 수정**: FMEA "mirrors" → "conceptually analogous to...no formal equivalence claimed"
+- [x] **#50 수정**: Conclusion 마지막 문장 → "Across the present CMAPSS experiments, label specification and fault-mode handling consistently produced larger performance differences than loss-function refinement — a priority ordering that may guide where PHM research and engineering effort is most productively directed."
+- [x] **#41–#49**: §V.F/V.H P3 항목 전체 (second Tier 2 guard, marginal regime, economic paragraph, resource-allocation signal 등)
