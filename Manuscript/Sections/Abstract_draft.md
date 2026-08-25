@@ -1,6 +1,6 @@
 # Abstract — RESS Submission
 
-> **Draft status:** v1.5 — 2026-08-13 (We → This study 전환)
+> **Draft status:** v1.7 — 2026-08-25 (GPT Rephrasing P2/P3: "establish"→"suggest", "each tier's failure impact"→"each tier produced qualitatively larger effects", gate confidence ≥0.8 threshold removed, "risk-prioritised"→"structured starting point")
 
 **Title:**
 From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction
@@ -11,9 +11,9 @@ From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Tu
 
 Reliable Prognostic and Health Management (PHM) systems for turbofan engines embed interdependent design decisions — RUL label clipping, sensor normalization, fault-mode architecture, and training loss function — whose contributions to predictive reliability are rarely isolated. This study presents a controlled ablation across all four NASA CMAPSS sub-datasets (FD001–FD004), covering five clipping thresholds, seven normalization strategies, four fault-mode architectures, and seven loss functions, with all comparisons Benjamini-Hochberg FDR-corrected.
 
-Fleet min-max normalization outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD004 but exhibits anomalously high inter-seed variance on FD003 (RMSE std = 12.86 vs. ≤1.84 elsewhere), traced to co-existing HPC and fan fault modes rather than normalization failure. An unsupervised attention-gate model (M3) routes engines to fault-specific branches from five initial cycles, reducing FD003 RMSE by 65.8% (14.78 ± 1.32 vs. 43.23 ± 0.18) and NASA Score by 98.8%, while remaining immune to the test-time cluster collapse that degrades GMM hard-routing by 75.4% on FD004. No custom loss outperforms MSE after multiple-comparison correction; removing RUL clipping inflates NASA prognostic scores by up to 306,000-fold regardless of loss design.
+Fleet min-max normalization outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD004 but exhibits anomalously high inter-seed variance on FD003 (RMSE std = 12.86 vs. ≤1.84 elsewhere), traced to co-existing HPC and fan fault modes rather than normalization failure. An unsupervised attention-gate model (M3) routes engines to fault-specific branches from ten initial observed cycles, reducing FD003 RMSE by 65.8% (14.78 ± 1.32 vs. 43.23 ± 0.18) and NASA Score by 98.8%, while remaining immune to the test-time cluster collapse that degrades Gaussian Mixture Model (GMM) hard-routing by 75.4% on FD004. No custom loss achieves statistically detectable improvement over MSE after multiple-comparison correction (N = 5 seeds; minimum detectable d ≈ 2.0); removing RUL clipping inflates NASA prognostic scores by up to 306,000-fold regardless of loss design.
 
-These findings establish a three-tier reliability-driven design checklist — label engineering, fault-mode architecture, loss function — where each tier's failure impact qualitatively exceeds the next; a systematic gate misclassification analysis proposes GatingNet confidence (mean max(w₀, w₁) ≥ 0.8) as a deployable routing reliability indicator, providing PHM engineers with risk-prioritised, CMAPSS-validated design guidance — a principled starting point requiring fleet-level validation prior to operational deployment.
+These findings suggest a three-tier design priority — label engineering, fault-mode architecture, loss function — where each tier produced qualitatively larger effects than the tier below it in the present experiments; a systematic gate misclassification analysis identifies gate confidence as an indicator of routing decisiveness, summarising the relative priorities observed across the four CMAPSS sub-datasets as a structured starting point requiring validation on representative fleet data before operational deployment.
 
 ---
 

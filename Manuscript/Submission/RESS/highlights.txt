@@ -3,7 +3,7 @@ Highlights
 
 • Fleet min-max outperforms per-unit and RevIN normalization on three of four datasets
 • FD003 variance anomaly traces to latent fault-mode heterogeneity, not normalization
-• M3 attention gate cuts FD003 RMSE 65.8%; gate confidence ≥ 0.8 verifies routing
+• M3 attention gate cuts FD003 RMSE 65.8%; confidence indicates routing decisiveness
 • No custom loss beats MSE after BH-FDR; misclipping inflates NASA scores 306,000-fold
 • Three-tier checklist: label engineering → fault-mode architecture → loss function
 
@@ -11,6 +11,6 @@ Highlights
 Character counts (must be ≤ 85 each):
 1. "Fleet min-max outperforms per-unit and RevIN normalization on three of four datasets" = 83 ✓
 2. "FD003 variance anomaly traces to latent fault-mode heterogeneity, not normalization" = 83 ✓
-3. "M3 attention gate cuts FD003 RMSE 65.8%; gate confidence ≥ 0.8 verifies routing" = 79 ✓
+3. "M3 attention gate cuts FD003 RMSE 65.8%; confidence indicates routing decisiveness" = 82 ✓
 4. "No custom loss beats MSE after BH-FDR; misclipping inflates NASA scores 306,000-fold" = 84 ✓
 5. "Three-tier checklist: label engineering → fault-mode architecture → loss function" = 81 ✓
