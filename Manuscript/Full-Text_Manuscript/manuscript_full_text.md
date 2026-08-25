@@ -7,7 +7,7 @@
 **Correspondence:** isay@etri.re.kr (Young Seog Yoon)
 
 > **Compiled:** 2026-07-06  
-> **Last revised:** 2026-08-14 (GPT리뷰 P1-3 대응: hierarchy→risk-priority ordering; cross-dataset→cross-scenario; RevIN→forward-only variant; causal→interpretation; 배치주장 완화; Pinball τ 명시; capacity control 문장 추가; M1_kprefix 실험 결과 §V.D 반영)  
+> **Last revised:** 2026-08-26 (GPT Rephrasing P1–P3 전 항목 반영: overclaim 완화, ≥0.8 처방 제거, 경제 수치 문단 삭제, "systemic reliability failure"→"most severe performance degradation", Conclusion 재작성, Cover Letter 일관성 반영)  
 > **Status:** Complete draft — all sections revised and cross-checked for internal consistency  
 > **Source sections:** `Manuscript/Sections/` (Abstract_draft, Introduction, Methodology, Results, Discussion_Implication, Conclusion)  
 > **Section numbering note:** Sections are numbered I, III–VI; Section II (Related Work) is integrated into Sections I and V.

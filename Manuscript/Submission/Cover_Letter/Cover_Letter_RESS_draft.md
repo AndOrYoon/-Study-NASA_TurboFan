@@ -1,6 +1,6 @@
 # Cover Letter — Reliability Engineering & System Safety
 
-> **Status:** Draft v1.2 — 2026-07-30 (저자 정보 반영: Young Seog Yoon, isay@etri.re.kr)
+> **Status:** Draft v1.3 — 2026-08-26 (GPT Rephrasing 일관성 반영: gate confidence ≥0.8 처방 제거, "we establish"→"we find evidence of", "systemic reliability failure"→"most severe performance degradation")
 > **Target:** Reliability Engineering & System Safety (Elsevier)
 > **Action required before submission:** Editor-in-Chief 성함 확인 (RESS 저널 페이지); 공동저자 있을 경우 서명란 추가
 

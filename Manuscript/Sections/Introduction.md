@@ -1,6 +1,6 @@
 ﻿# I. Introduction
 
-> **Draft status:** v1.8 — 2026-08-25 (Major 1: H1 OLS(LinearRegression) 선택이 tier-1 근거를 architecture-agnostic하게 만든다는 문장 추가 — §I para 3)
+> **Draft status:** v1.9 — 2026-08-26 (GPT Rephrasing P1 #1–5 + P2 #19–21 반영: "safety-critical prerequisite"→"safety-relevant design decision", Contribution i "demonstrating"→"suggesting", Contribution iii ≥0.8 처방 제거·관찰 기반 표현으로, Contribution ii "predicts the need"→"may warrant further investigation", H1 OLS 헤더 수정)
 
 ---
 

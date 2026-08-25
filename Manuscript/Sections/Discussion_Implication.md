@@ -1,6 +1,6 @@
 ﻿# V. Discussion and Implications
 
-> **Draft status:** v1.8 — 2026-08-25 (P1 rephrasing: Items 1–15 + P2 #26–30 applied — overclaim/slogan/generalization 완화)
+> **Draft status:** v1.9 — 2026-08-26 (GPT Rephrasing P1–P3 전 항목 반영 완료: P2 #16–40, P3 #41–49 포함; 경제 수치 문단 삭제, ≥0.8 처방 제거, "second Tier 2 guard"→"additional diagnostic", "translates directly"→"may provide a useful structure")
 > *(v1.0 — 2026-07-03)*
 > **Relates to:** Sections III (Methodology) and IV (Results)
 > **Reference anchors:** [n] correspond to Manuscript/References.md numbering
