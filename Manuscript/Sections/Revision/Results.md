@@ -40,14 +40,14 @@ To verify that N1's advantage over per-unit normalisation was not an artefact of
 
 Under the unified protocol, N1 retained its advantage over N3 on FD001 (RMSE 13.59 vs 18.61; p_BH = 0.009; d = 13.15) and FD002 (15.84 vs 17.98; p_BH = 0.009; d = 3.53). On FD003, the fleet advantage was also detectable under the unified protocol (12.97 vs 21.34; p_BH = 0.009; d = 8.34), whereas it was not detectable under the original H2 protocol — confirming that the FD003 anomaly was a protocol interaction rather than a genuine absence of fleet-level advantage. No significant difference was found on FD004 (17.92 vs 18.51; p_BH = 0.46; d = 0.26), indicating that the normalization ranking on multi-condition datasets is sensitive to whether explicit operating-condition columns are retained. Crucially, the N1/FD003 standard deviation collapsed from 12.86 under the original H2 protocol to 0.67 under the unified protocol, confirming that the anomalous inter-seed variance was a protocol-configuration effect rather than a property of fleet normalization or fault-mode heterogeneity per se.
 
-**Table V-B: N1 (fleet min-max) vs N3 (per-unit min-max) RMSE under unified backbone-matched protocol (5 seeds; Wilcoxon rank-sum, BH-FDR corrected)**
+**Table V-B: N1 (fleet min-max) vs N3 (per-unit min-max) RMSE under unified backbone-matched protocol (5 seeds; Wilcoxon rank-sum, one-sided, BH-FDR corrected)**
 
 | Dataset | N1 RMSE (mean ± SD) | N3 RMSE (mean ± SD) | ΔRMSE | Cohen's *d* | *p*_BH | Sig. |
 |---------|---------------------|---------------------|-------|-------------|--------|------|
 | FD001 | 13.59 ± 0.17 | 18.61 ± 0.51 | +5.02 | 13.15 | 0.009 | ✓ |
 | FD002 | 15.84 ± 0.40 | 17.98 ± 0.76 | +2.15 | 3.53 | 0.009 | ✓ |
 | FD003 | 12.97 ± 0.67 | 21.34 ± 1.25 | +8.36 | 8.34 | 0.009 | ✓ |
-| FD004 | 17.92 ± 2.50 | 18.51 ± 2.05 | +0.59 | 0.26 | 0.459 | — |
+| FD004 | 17.92 ± 2.50 | 18.51 ± 2.05 | +0.59 | 0.26 | 0.458 | — |
 
 ΔRMSE = N3 − N1 (positive = N3 worse). Sig. ✓: p_BH < 0.05 and |d| ≥ 0.3.
 

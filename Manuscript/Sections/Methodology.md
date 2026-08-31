@@ -178,7 +178,7 @@ The feature set and validation-split method differ across hypotheses, as shown i
 | H1 | Sensors + op cols (OLS) | N/A (deterministic OLS) | Linear regression (OLS) |
 | H2 | Sensors + op cols (incl. op1/op2/op3) | Last 20% by unit ID (deterministic) | Compact LSTM (LSTM₂ hidden=32) |
 | H3 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
-| H4 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
+| H4 | Sensors only (no op cols) | Deterministic 20% (last 20% by unit ID) | Full LSTM (LSTM₂ hidden=64) |
 
 For H2 the resulting input dimension F is 17 (FD001: 14 sensors + 3 op), 18 (FD003: 15 sensors + 3 op), or 23 (FD002/FD004 after residualisation: 20 sensors + 3 op). For H3/H4 F is 14 (FD001), 15 (FD003), or 20 (FD002/FD004 after residualisation). **Note:** The feature and split differences between H2 and H3 reflect independent implementation choices made prior to analysis; they mean that the two hypotheses are not directly cross-comparable in absolute RMSE terms. Each hypothesis is interpreted relative to its own baseline condition.
 
