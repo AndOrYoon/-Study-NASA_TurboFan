@@ -75,7 +75,8 @@ C:\BMAD_PY313\
 - **Datasets:** FD001–FD004; 21 raw sensors, space-separated `.txt` files, no header
 - **Column order:** `unit cycle op1 op2 op3 s1…s21`
 - **Constant sensors to drop** (zero-variance, per dataset):
-  - FD001/FD003: `s1 s5 s6 s10 s16 s18 s19` → 14 features remaining
+  - FD001: `s1 s5 s6 s10 s16 s18 s19` → 14 features remaining
+  - FD003: `s1 s5 s10 s16 s18 s19` → 15 features remaining (s6 is NOT constant in FD003)
   - FD002: `s16` → 20 features; FD004: `s16` → 20 features
 - **RUL labeling:** piecewise-linear, `clip=125` is the validated standard. `clip=None` causes catastrophic NASA scores on FD003.
 - **Train/val split:** engine-level (hold out 20% of complete engines, not cycles). Never split by cycle — it causes RUL distribution mismatch.

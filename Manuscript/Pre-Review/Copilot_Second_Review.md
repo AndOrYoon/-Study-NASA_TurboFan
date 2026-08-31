@@ -28,7 +28,7 @@ The manuscript should be judged as a strong reliability-oriented PHM contributio
 **Competition Level:** Medium-high
 **Typical RESS acceptance rate:** ~28–35% overall
 
-### Why this paper fits RESS well
+### Why this paper fits RESS well`
 - It treats RUL prediction as a reliability and safety problem, not merely a regression benchmark.
 - The paper quantifies failure consequences in a way RESS reviewers value: catastrophic loss under clipping mistakes, failure-mode sensitivity, and deployment reliability trade-offs.
 - The three-tier hierarchy (label engineering → architecture → loss) is a classic reliability framing: identify the risk-dominant factors first, then handle secondary issues.

@@ -1,6 +1,6 @@
 # III. Methodology
 
-> **Draft status:** v1.8 — 2026-08-25 (Moderate review: [G] §III.D self-ref, [H] §III.J cross-ref §II→§III, [J] §III.F GMM k=2 중복 제거, [L] M1_kprefix Methodology 명시)
+> **Draft status:** v1.9 — 2026-08-31 (Synced with manuscript_full_text_clean.md: §III.D unified protocol 단락 추가, §III.E three→two reasons, §III.H per-hypothesis 설정 추가, §III.K 검정명 수정)
 > **Style:** Elsevier single-column (elsarticle, review mode) — Markdown source; compiled to LaTeX via build_ress_latex.py
 
 ---
@@ -59,11 +59,13 @@ N1 served as the primary comparison baseline. All strategies were evaluated on t
 | N6 | Per-unit z-score (10 cy) | Engine $i$, $t \le 10$, per sensor $j$ |
 | N7 | RevIN-style fwd-only (learnable) | $\mathbf{W}_t^{(i)} \in \mathbb{R}^{30 \times F}$, per sensor $j$ |
 
+**Protocol-unified N1–N3 robustness analysis.** To assess whether N1's advantage over per-unit normalization persisted across experimental protocols, N1 and N3 were directly compared using the H3 backbone configuration (full-capacity LSTM, sensors-only features, random 20% engine validation split, 30-epoch minimum warm-up, and prediction clipping to [0, 125]; 5 seeds per strategy per dataset). Results are reported in §IV.B.2 (40 runs: 2 strategies × 4 datasets × 5 seeds).
+
 ---
 
 ## E. LSTM Backbone Architectures
 
-The stacked LSTM was selected as the controlled backbone for this ablation for three reasons. First, LSTM-based models constitute the dominant baseline class in the CMAPSS RUL literature [5, 6, 9], making results directly comparable with prior single-factor studies. Second, a controlled ablation requires the backbone to remain fixed across conditions; substituting an attention-based encoder would conflate backbone capacity with the design factor under study, preventing clean attribution of observed differences. Third, pilot experiments in which the backbone was replaced with a Transformer encoder or a self-attention LSTM found that attention mechanisms perform fault-mode separation implicitly — rendering the explicit early-cycle GatingNet (M3) redundant — a finding that constitutes a separate research question rather than a controllable variable within the present study. The design-factor rankings established in §IV.A therefore apply specifically to stacked LSTM architectures; whether and how the tier ordering changes for attention-based backbones is identified as a priority open question in §IV.I.
+The stacked LSTM was selected as the controlled backbone for this ablation for two reasons. First, LSTM-based models constitute the dominant baseline class in the CMAPSS RUL literature [4, 5, 8], making results directly comparable with prior single-factor studies. Second, a controlled ablation requires the backbone to remain fixed across conditions; substituting an attention-based encoder would conflate backbone capacity with the design factor under study, preventing clean attribution of observed differences. Whether attention mechanisms perform fault-mode separation implicitly — rendering the explicit early-cycle GatingNet (M3) redundant over Transformer backbones — is identified as a priority open question in §V.I rather than a verified finding within the present study.
 
 H2 used a compact LSTM backbone and H3/H4 used a full-capacity backbone; within each hypothesis, the backbone was held fixed so that observed differences reflected only the design factor under study. Each network takes a sliding window of 30 consecutive cycles as input and produces a scalar RUL estimate:
 
@@ -111,7 +113,7 @@ The final prediction is $\hat{y}_{\text{final}} = w_0\hat{y}_0 + w_1\hat{y}_1$ w
 
 $$\mathcal{L}_{\text{M3}} = \text{MSE}(\hat{y}_{\text{final}},\, y) + 0.05\cdot\text{MSE}(\hat{y}_0,\, y) + 0.05\cdot\text{MSE}(\hat{y}_1,\, y)$$
 
-By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. To quantify M3's deployment robustness to GatingNet misclassification, a false-routing sensitivity analysis was conducted (§IV.C.2): gate weights were systematically perturbed — fully inverted (w₀ ↔ w₁), forced to Branch-0 only, or forced to Branch-1 only — and the resulting RMSE degradation was measured across all five seeds on FD003 and FD004. GatingNet confidence, defined as mean max(w₀, w₁) over the test set, is proposed as a post-training reliability indicator for routing deployment.
+By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004. Mean maximum gate weight (mean max(w₀, w₁) over training engines) is recorded as a descriptive statistic for routing decisiveness; see §IV.C.2.
 
 **Table II. Computational complexity of H3 architectures (FD003, F = 15 features).**
 *Parameter counts verified by direct model inspection. FLOPs computed analytically per inference window (batch = 1, window = 30 cycles) using the standard LSTM FLOPs formula: 8 × (input + hidden) × hidden per timestep. Inference latency measured on NVIDIA RTX GPU (2,000 runs, batch = 1, after 200-run warm-up; mean ± std reported). Training time is GPU compute per epoch on FD003 (~13,600 training sequences, batch = 256), excluding data loading. M1 routes each test engine to a single branch via GMM argmax, so its inference FLOPs equal M0's.*
@@ -125,7 +127,7 @@ By reading only early-cycle data, M3 avoids any dependence on late-cycle observa
 
 †M1 activates one branch at inference (GMM argmax); both branches (112.3K) reside in memory but only one branch forward pass executes.  ‡M1 trains two branches sequentially; reported time is total per epoch.
 
-M3's GatingNet adds only 4.9K parameters above M1/M2 (< 5% overhead), confirming that the performance improvement is not attributable to additional model capacity. The approximately 2× parameter increase from M0 to M3 reflects the two independent prediction branches rather than the gating mechanism itself. All four architectures are well within the computational budget of embedded PHM controllers, which typically support models of up to several hundred thousand parameters.
+M3's GatingNet adds only 4.9K parameters above M1/M2 (< 5% overhead), confirming that any performance differences across architectures are not attributable to additional model capacity. The approximately 2× parameter increase from M0 to M3 reflects the two independent prediction branches rather than the gating mechanism itself. All four architectures are well within the computational budget of embedded PHM controllers, which typically support models of up to several hundred thousand parameters.
 
 For M1 and M2, GMM cluster assignments (k = 2, full covariance) were derived by unsupervised fitting on degradation-slope features of seven discriminant sensors identified by EDA (s15, s20, s21, s7, s12, s2, s4). The inter-cluster discriminability of each sensor is quantified by its inter-cluster z-score:
 
@@ -155,7 +157,14 @@ For L5 (TWA), w_time = 1 + λ_t · r and w_asym = 1 if d < 0, else λ_a. For L7,
 
 ## H. Training Configuration
 
-All models were optimised with Adam (learning rate 1×10⁻³, weight decay 1×10⁻⁴) with a batch size of 256, for a maximum of 100 epochs. Early stopping monitored validation loss with patience of 15 epochs and restored the best-performing checkpoint. The validation set was constructed by engine-level holdout: 20% of training engines were withheld, and all cycles of those engines were excluded from training. This prevented the RUL distribution mismatch that arises from cycle-level splitting. Each experimental configuration was run with five random seeds (0, 1, 2, 3, 4); results are reported as mean ± standard deviation across seeds.
+Training configuration differed across hypotheses as follows:
+
+- **H1 (Linear Regression):** Deterministic OLS — no random seeds, no early stopping, no epochs.
+- **H2 (Normalization):** Compact LSTM; validation split is deterministic (last 20% of engines by unit ID); 5 seeds; 100 max epochs; patience = 15; test predictions clipped to [0, 125].
+- **H3 (Fault-mode architecture):** Full-capacity LSTM; validation split is random (per-run training seed); minimum 30-epoch warm-up before early stopping; 5 seeds; test predictions clipped to [0, 125].
+- **H4 (Loss functions):** Full-capacity LSTM; same as H3 except no minimum warm-up.
+
+General settings applied within each hypothesis unless overridden above:
 
 | Hyperparameter | Value |
 |----------------|-------|
@@ -165,7 +174,6 @@ All models were optimised with Adam (learning rate 1×10⁻³, weight decay 1×1
 | Batch size | 256 |
 | Max epochs | 100 |
 | Early-stop patience | 15 (val loss) |
-| Validation split | Engine-level, 20% of engines |
 | Sliding window | 30 cycles |
 | Random seeds | {0, 1, 2, 3, 4} |
 
@@ -177,8 +185,8 @@ The feature set and validation-split method differ across hypotheses, as shown i
 |-----------|------------|-----------------|---------|
 | H1 | Sensors + op cols (OLS) | N/A (deterministic OLS) | Linear regression (OLS) |
 | H2 | Sensors + op cols (incl. op1/op2/op3) | Last 20% by unit ID (deterministic) | Compact LSTM (LSTM₂ hidden=32) |
-| H3 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
-| H4 | Sensors only (no op cols) | Random 20% (RandomState seed=42) | Full LSTM (LSTM₂ hidden=64) |
+| H3 | Sensors only (no op cols); predictions clipped to [0, 125] at evaluation | Random 20% (per-run training seed); 30-epoch minimum warm-up | Full LSTM (LSTM₂ hidden=64) |
+| H4 | Sensors only (no op cols) | Random 20% (per-run training seed) | Full LSTM (LSTM₂ hidden=64) |
 
 For H2 the resulting input dimension F is 17 (FD001: 14 sensors + 3 op), 18 (FD003: 15 sensors + 3 op), or 23 (FD002/FD004 after residualisation: 20 sensors + 3 op). For H3/H4 F is 14 (FD001), 15 (FD003), or 20 (FD002/FD004 after residualisation). **Note:** The feature and split differences between H2 and H3 reflect independent implementation choices made prior to analysis; they mean that the two hypotheses are not directly cross-comparable in absolute RMSE terms. Each hypothesis is interpreted relative to its own baseline condition.
 
@@ -192,18 +200,22 @@ $$\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(\hat{y}_i - y_i)^2}$$
 
 The NASA prognostic score penalises late predictions more severely than early ones:
 
-$$s(d) = \begin{cases} e^{-d/13} - 1 & d < 0 \text{ (early prediction)} \\ e^{d/10} - 1 & d \geq 0 \text{ (late prediction)} \end{cases}, \quad \text{NASA Score} = \frac{1}{N}\sum_{i=1}^{N} s(\hat{y}_i - y_i)$$
+$$s(d) = \begin{cases} e^{-d/13} - 1 & d < 0 \text{ (early prediction)} \\ e^{d/10} - 1 & d \geq 0 \text{ (late prediction)} \end{cases}, \quad \text{Mean NASA Penalty} = \frac{1}{N}\sum_{i=1}^{N} s(\hat{y}_i - y_i)$$
 
-where d = ŷ − y and N is the number of test engines. NASA Score is lower-is-better; a perfect prediction yields zero.
+where d = ŷ − y and N is the number of test engines. This study reports the mean prognostic penalty per test engine, which normalises for the different test-set sizes across sub-datasets (N = 100–259). This formulation differs from the conventional sum-of-penalties reported in much of the CMAPSS literature; absolute values are not directly comparable with published summed scores, though ratios and orderings across conditions are unaffected. Mean NASA Penalty is lower-is-better; a perfect prediction yields zero.
 
 ---
 
 ## J. Statistical Testing
 
-Statistical comparisons differed in sample unit by hypothesis. For H1 (linear regression, deterministic), comparisons used a two-sided Mann-Whitney U test (`scipy.stats.ranksums`) on per-engine RMSE values (N ≈ 100–259 per dataset; see §III.K). For H2, H3, and H4 (LSTM, stochastic), comparisons used one-sided Wilcoxon rank-sum tests on per-seed aggregate metrics (N = 5), testing whether the treatment condition improves over baseline. All tests used α = 0.05 before correction. When multiple treatment conditions are compared simultaneously within one hypothesis, raw p-values were corrected using the Benjamini-Hochberg (BH) procedure at α_FDR = 0.05. A result was considered statistically meaningful when both p_BH < 0.05 **and** Cohen's d ≥ 0.3 (small effect threshold). Conditions satisfying the p-value criterion but yielding |d| < 0.1 are reported as "statistically significant but practically negligible" to distinguish statistical from practical significance. For context, a Cohen's d of 0.3 at the FD001 RMSE baseline of approximately 14–16 cycles corresponds to a mean RMSE difference of approximately 0.6–1.0 cycles — a gap comparable to one cycle of maintenance scheduling uncertainty in typical PHM deployment contexts.
+Statistical comparisons differed in sample unit by hypothesis. For H1 (linear regression, deterministic), comparisons used a two-sided Wilcoxon rank-sum test (`scipy.stats.ranksums`) on per-engine RMSE values (N ≈ 100–259 per dataset; see §III.K). Note: `scipy.stats.ranksums` implements the Wilcoxon rank-sum test; the SciPy function for Mann-Whitney U is `scipy.stats.mannwhitneyu`. The two tests are mathematically equivalent on continuous data but named differently in the library.
+
+For H2 (normalization, LSTM stochastic), comparisons used two-sided Wilcoxon rank-sum tests (`scipy.stats.ranksums`) on per-seed aggregate metrics (N = 5) to detect differences in either direction. For H4 (loss functions, LSTM stochastic), comparisons used one-sided Wilcoxon rank-sum tests on per-seed aggregate metrics (N = 5), testing the pre-specified directional hypothesis that the custom loss improves over MSE. For H3, two-sided tests are used to capture both improvement and degradation directions. Because M1 trains two branches on per-cluster engine subsets, its validation split drew from cluster-specific pools (seed=42 per cluster), whereas M0's validation split drew from the full engine pool (seed=42). Although the same random seed was used, the non-overlapping engine pools make per-seed outcomes effectively independent; M0-vs-M1 comparisons therefore used an independent two-sided Mann-Whitney U test (`scipy.stats.mannwhitneyu`, N = 5 per group). This pooling difference is a design limitation: M1's cluster-restricted training pools are smaller than M0's single-pool split, which may modestly disadvantage M1; re-running with a shared outer split was not feasible within the current study scope. M0-vs-M2 and M0-vs-M3 comparisons used paired two-sided Wilcoxon signed-rank tests (`scipy.stats.wilcoxon`, N = 5 pairs), exploiting the identical per-seed validation split shared by M0, M2, and M3. All six H3 p-values were jointly BH-FDR-corrected.
+
+All tests used α = 0.05 before correction. When multiple treatment conditions are compared simultaneously within one hypothesis, raw p-values were corrected using the Benjamini-Hochberg (BH) procedure at α_FDR = 0.05. A result was considered statistically meaningful when both p_BH < 0.05 **and** Cohen's d ≥ 0.3 (small effect threshold). Conditions satisfying the p-value criterion but yielding |d| < 0.1 are reported as "statistically significant but practically negligible" to distinguish statistical from practical significance.
 
 ---
 
 ## K. H1 Baseline Model (Linear Regression)
 
-The RUL clipping study (H1) used ordinary least squares linear regression (`sklearn.linear_model.LinearRegression`, no regularisation) as its predictive model. Linear regression was chosen to isolate the effect of label engineering from non-linear model capacity: the clipping threshold's effect on RUL label distribution is architecture-independent, and a deterministic closed-form baseline eliminates random-initialisation variance. Each of the 20 experimental configurations (5 clip values × 4 datasets) was run exactly once; the model has no random state and produces identical results on identical data. The Wilcoxon comparison for H1 used the Mann-Whitney U test (`scipy.stats.ranksums`, unpaired, two-sided) on per-engine RMSE values (N ≈ 100–259 per dataset depending on sub-dataset). Note that this is technically an unpaired test; a paired Wilcoxon signed-rank test would be marginally more statistically efficient since the same test engines are evaluated under both clip conditions, and this limitation should be borne in mind when interpreting H1 significance levels.
+The RUL clipping study (H1) used ordinary least squares linear regression (`sklearn.linear_model.LinearRegression`, no regularisation) as its predictive model. Linear regression was chosen to isolate the effect of label engineering from non-linear model capacity: the clipping threshold's effect on RUL label distribution is architecture-independent, and a deterministic closed-form baseline eliminates random-initialisation variance. Each of the 20 experimental configurations (5 clip values × 4 datasets) was run exactly once; the model has no random state and produces identical results on identical data. The statistical comparison for H1 used the Wilcoxon rank-sum test (`scipy.stats.ranksums`, unpaired, two-sided) on per-engine RMSE values (N ≈ 100–259 per dataset depending on sub-dataset). Note that this is technically an unpaired test; a paired Wilcoxon signed-rank test would be marginally more statistically efficient since the same test engines are evaluated under both clip conditions, and this limitation should be borne in mind when interpreting H1 significance levels.

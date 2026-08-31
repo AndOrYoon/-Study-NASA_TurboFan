@@ -1,7 +1,7 @@
 Declaration of Generative AI and AI-assisted Technologies in the Writing Process
 
 During the preparation of this work the authors used Claude (Anthropic) in order to
-assist with manuscript drafting, language editing, and literature review. After using
+assist with language editing and literature review. After using
 this tool/service, the authors reviewed and edited the content as needed and take full
 responsibility for the content of the publication.
 
