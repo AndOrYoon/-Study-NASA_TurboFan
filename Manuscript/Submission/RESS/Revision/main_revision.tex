@@ -1,0 +1,924 @@
+\documentclass[review,12pt]{elsarticle}
+% Elsevier elsarticle class — review mode (single column, line numbers)
+% Change to [preprint,12pt] for a clean preprint or [final,12pt] for final
+
+\usepackage{fontspec}
+\usepackage{underscore}
+\usepackage{amsmath,amssymb}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{url}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\usepackage{caption}
+\usepackage{lineno}
+\modulolinenumbers[5]
+\emergencystretch=2em
+
+\journal{Reliability Engineering \& System Safety}
+
+\bibliographystyle{elsarticle-num}
+
+\renewcommand{\thetable}{\Roman{table}}
+
+\begin{document}
+\begin{frontmatter}
+
+\title{From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction}
+
+\author[inst1]{Young Seog Yoon\corref{cor1}\fnref{orcid1}}
+\ead{isay@etri.re.kr}
+\cortext[cor1]{Corresponding author}
+\fntext[orcid1]{ORCID: 0000-0003-3796-8480}
+
+\author[inst1]{Eun Seo Lee}
+\ead{eslee@etri.re.kr}
+
+\author[inst1]{Hyeontae Kim}
+\ead{kht@etri.re.kr}
+
+\author[inst2]{Ji Yeon Son}
+\ead{jyson@etri.re.kr}
+
+\affiliation[inst1]{organization={Electronics and Telecommunications Research Institute (ETRI)},
+             department={Behavioral Intelligence for Autonomous Manufacturing Research Section},
+             city={Daejeon},
+             country={South Korea}}
+
+\affiliation[inst2]{organization={Electronics and Telecommunications Research Institute (ETRI)},
+             department={Autonomous Manufacturing Research Division},
+             city={Daejeon},
+             country={South Korea}}
+
+\begin{abstract}
+Reliable Prognostic and Health Management (PHM) systems for turbofan engines embed interdependent design decisions — RUL label clipping, sensor normalization, fault-mode architecture, and training loss function — whose contributions to predictive reliability are rarely isolated. This study presents a controlled ablation across all four NASA CMAPSS sub-datasets (FD001–FD004), covering five clipping thresholds, seven normalization strategies, four fault-mode architectures, and seven loss functions, with all comparisons Benjamini-Hochberg FDR-corrected.
+
+Fleet min-max normalization outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD004 under the primary seven-strategy screening protocol; a supplementary protocol-unified N1--N3 comparison confirmed cross-protocol robustness on FD001 and FD002 but found no detectable difference on FD004 (p$_\text{BH}$ = 0.46), indicating protocol sensitivity on multi-condition datasets. The anomalously high inter-seed variance on FD003 (RMSE std = 12.86 vs.\ $\leq\!1.84$ elsewhere) resolved to std = 0.67 under a backbone-matched controlled protocol, indicating it reflects a training-protocol interaction rather than a normalization limitation. A controlled comparison of four fault-mode architectures shows that GMM-based hard partitioning substantially degraded RMSE on both multi-fault datasets (FD003: +156\%; FD004: +76\%), while soft and end-to-end attention routing avoid this degradation but provide no statistically detectable improvement over the single-model baseline. No custom loss achieves statistically detectable improvement over MSE after multiple-comparison correction (N = 5 seeds; minimum detectable $d \approx 2.0$); removing RUL clipping inflates NASA prognostic scores by up to 306,000-fold regardless of loss design.
+
+These findings suggest that upstream design decisions --- RUL clipping and sensor normalisation --- produce larger and more consistent performance differences than downstream choices --- fault-mode routing and loss function --- in the present CMAPSS experiments; gate confidence is proposed as a post-training diagnostic for routing decisiveness, with a practical design checklist summarising observed priorities as a structured starting point requiring validation on representative fleet data before operational deployment.
+\end{abstract}
+
+\begin{keyword}
+Remaining useful life prediction \sep
+Prognostics and health management \sep
+Turbofan engine \sep
+NASA CMAPSS \sep
+LSTM \sep
+Fault-mode gating \sep
+Normalization ablation
+\end{keyword}
+
+\end{frontmatter}
+
+\linenumbers
+
+
+\section{Introduction}
+
+Remaining Useful Life (RUL) prediction for turbofan engines is a foundational task in Prognostic and Health Management (PHM), directly shaping safety-critical maintenance scheduling decisions in civil and military aviation. The NASA prognostic score reflects the underlying risk asymmetry explicitly: late predictions — where remaining life is over-estimated — carry an exponentially higher penalty than early ones, because an undetected engine failure costs orders of magnitude more than a precautionary shop visit. This asymmetric risk structure means that design choices in a turbofan PHM pipeline — how RUL targets are labelled, how sensor data are normalised, how multi-fault engines are handled — interact with the evaluation metric in ways that can constitute systemic reliability failures when misconfigured. The NASA CMAPSS benchmark \cite{ref01}, comprising four run-to-failure sub-datasets (FD001–FD004) under varying fault modes and operating conditions, has served as the canonical testbed for data-driven RUL estimation since 2008. As model architectures have evolved from linear regression \cite{ref02} to stacked LSTM \cite{ref05,ref06} and attention-based encoders \cite{ref13,ref14,ref45}, reported RMSE on FD001 has fallen from above 25 cycles to below 13 \cite{ref15}. Yet the individual effects and robustness boundaries of these pipeline decisions are rarely isolated, leaving unresolved which choices materially affect predictive reliability under controlled conditions.
+
+Individual design factors are rarely isolated from one another in the CMAPSS literature \cite{ref03,ref17}: the prevailing evaluation pattern bundles normalisation, architecture, and loss function into a single proposed pipeline, making it impossible to attribute observed performance gains to any specific component. The stakes of misspecification can be severe --- as this study demonstrates, a single label-engineering error inflated the FD003 NASA prognostic score by up to 306,000-fold, dwarfing any difference attributable to architectural sophistication or loss-function design. Section~II reviews how each design factor has been treated in prior work and identifies the four specific attribution gaps that motivate the present controlled ablation.
+
+This study addresses these gaps through a controlled ablation across all four CMAPSS sub-datasets. H1 uses linear regression (OLS) to test whether the label effect is observable under a capacity-limited deterministic baseline; this design choice does not by itself establish architecture-independence across all backbone types. H2 uses a compact stacked LSTM (LSTM2 hidden=32). H3 and H4 use a full-capacity stacked LSTM (LSTM2 hidden=64). Within each hypothesis, all other factors are held constant while the design factor under study is varied, with comparisons using hypothesis-specific non-parametric tests corrected by Benjamini-Hochberg FDR (BH-FDR). Five RUL clipping thresholds (H1), seven normalisation strategies (H2), four fault-mode architectures (H3), and seven training loss functions (H4) were independently varied, enabling attribution of observed performance differences to the factor under study. The stacked LSTM was selected as the controlled backbone rather than attention-based alternatives for two reasons: (i) LSTM models represent the dominant baseline class in the CMAPSS literature \cite{ref05,ref06,ref09}, maintaining comparability with prior work; and (ii) a controlled ablation requires the backbone to remain fixed across conditions --- whether attention-based encoders perform fault-mode separation implicitly, which would make the explicit early-cycle GatingNet (H3/M3) redundant, is an open question addressed in \S{}V-I rather than a tested finding within this ablation. The design-factor effects observed in \S{}IV therefore apply specifically to the stacked LSTM backbone; generalisation to attention-based encoders requires separate evaluation.
+
+H1 first isolates the effect of the RUL ceiling threshold using a capacity-limited deterministic baseline (OLS), establishing whether label design produces a detectable performance effect independent of backbone architecture. Based on H1, $\tau = 125$ --- the established literature standard \cite{ref05,ref06} --- was fixed for H2 and H3 and served as the reference clipping condition in H4, where $\tau$ was explicitly varied to evaluate clipping--loss interactions.
+
+The main contributions of this paper are:
+
+(i) A cross-dataset attribution study of four PHM pipeline design factors --- RUL label clipping, sensor normalisation, fault-mode architecture, and loss function --- showing that upstream target and data transformations (clipping, normalisation) produce larger and more consistent performance differences than downstream routing and loss-function modifications across the evaluated CMAPSS settings, with results expressed as a sequential design checklist for PHM pipeline configuration.
+
+(ii) A seven-strategy normalisation ablation on CMAPSS, supplemented by a protocol-unified N1--N3 robustness analysis, showing that fleet-level min-max scaling significantly outperforms per-unit and RevIN strategies on FD001 and FD002 across both protocols (cross-protocol robust), with additional protocol-specific advantages on FD004 (original screening, p$_\text{BH}$ = 0.009) and FD003 (unified protocol, p$_\text{BH}$ = 0.009), and that FD003's anomalous inter-seed RMSE variance (std = 12.86 vs $\leq\!1.84$ elsewhere) reflects an interaction among backbone capacity, validation split method, and checkpoint-selection dynamics under the H2 experimental protocol --- resolving to std = 0.67 under a backbone-matched controlled comparison --- rather than a normalisation deficiency.
+
+(iii) A controlled comparison of four fault-mode architectures (M0--M3), showing that GMM-based hard partitioning substantially degraded prognostic performance on both multi-fault datasets (FD003: +156\% RMSE; FD004: +76\%), while soft and end-to-end attention routing avoid this degradation without statistically detectable improvement over the single-model baseline.
+
+(iv) A confirmation across all four CMAPSS sub-datasets that no custom loss function achieves statistically detectable improvement over MSE after Benjamini-Hochberg FDR correction across 96 pairwise comparisons (6 loss functions $\times$ 4 clipping values $\times$ 4 sub-datasets), establishing loss function design as the lowest-priority tier of the risk-priority ordering. Removing RUL clipping inflated FD003 NASA Score by up to 306,000-fold regardless of loss design --- confirming that label engineering subsumes loss function choice as the dominant control over tail-risk behaviour in the NASA prognostic metric.
+
+\section{Related Work}
+
+\subsection{Benchmarking and Design-Factor Attribution in RUL Prediction}
+
+The NASA CMAPSS benchmark \cite{ref01}, released in 2008, established the canonical testbed for data-driven turbofan prognostics and remains the primary evaluation platform for RUL prediction research. Heimes \cite{ref02} demonstrated that recurrent architectures could track degradation trends from multivariate sensor sequences, establishing an early FD001 RMSE ceiling above 25 cycles. Zheng et al.\ \cite{ref05} introduced the stacked two-layer LSTM that became the dominant sequential backbone; Li et al.\ \cite{ref06} combined LSTM temporal modelling with convolutional feature extraction to reduce FD001 RMSE into the 13--15 cycle range. Subsequent architectural advances --- including bidirectional recurrent models, Transformer encoders, graph neural networks, and hybrid attention systems --- have continued this trajectory, with recent studies reporting RMSE values in the low-to-mid teens under heterogeneous evaluation protocols \cite{ref13,ref15,ref29}.
+
+Despite this apparent progress, a systematic attribution problem persists. The prevailing evaluation pattern bundles preprocessing, backbone architecture, and training objective into a single proposed system and reports aggregate performance without isolating contributions from individual stages. Deng et al.\ \cite{ref29}, for instance, combined CNN feature extraction, LSTM temporal modelling, and multi-head attention into a unified system reporting RMSE = 13.91 on FD003; Asif et al.\ \cite{ref42} showed that refined RUL labelling and sensor preprocessing alone substantially reduce the performance gap on FD001 without any architectural modification. In both cases, the source of the reported gain cannot be attributed to any single pipeline component. Ramasso and Saxena \cite{ref03}, reviewing more than seventy CMAPSS publications, found that absent standardised preprocessing baselines and persistent dataset misunderstandings, multi-fault-mode and operating-condition challenges remained unresolved despite years of collective effort. Li et al.\ \cite{ref17} reached the same conclusion in a recent survey, noting that preprocessing choices are rarely disclosed in sufficient detail for independent reproduction. Existing CMAPSS studies demonstrate strong predictive performance, but their bundled experimental designs make it difficult to determine whether reported gains originate from target construction, normalisation, architecture, or loss design.
+
+\subsection{RUL Label Construction and Sensor Normalisation}
+
+\textbf{RUL label construction.} Piecewise-linear RUL labelling with a degradation-onset ceiling is the most widely adopted formulation in the CMAPSS literature \cite{ref05,ref06}. The specific ceiling threshold used by individual studies ranges from 100 to 150 cycles without systematic justification across sub-datasets. Ensario\u{g}lu et al.\ \cite{ref19} showed that change-point detection-based labelling improves FD001 RMSE, but did not evaluate the ceiling threshold as an independent variable. Imbert et al.\ \cite{ref18} found that preprocessing choices --- including RUL label specification --- drove a substantial share of observed performance gains in temporal convolutional network experiments. Asif et al.\ \cite{ref42} reached a compatible conclusion for LSTM-based models: labelling and sensor preprocessing alone substantially closed the FD001 performance gap without architectural modification. These findings indicate that the clipping ceiling functions as a high-leverage prerequisite design decision, yet, to the best of our knowledge, no prior study has conducted a controlled multi-threshold ablation across all four CMAPSS sub-datasets while holding the backbone architecture constant.
+
+\textbf{Sensor normalisation.} Fleet-level min-max scaling applied over all training engines is the default normalisation in dominant CMAPSS implementations \cite{ref05,ref06,ref09}, but alternatives --- per-unit z-score, per-unit min-max with an initial-window baseline, and instance-level distribution-shift correction --- have been proposed. The operating-condition heterogeneity of FD002 and FD004, where sensors shift by tens to hundreds of units across six discrete operating regimes, complicates the direct application of fleet-level statistics and has motivated condition-aware preprocessing frameworks \cite{ref10,ref24}. Reversible Instance Normalisation (RevIN) \cite{ref23}, originally developed for non-stationary time-series forecasting, performs per-window mean and variance normalisation followed by a learnable affine rescaling of model outputs, and has shown strong gains in distribution-shift settings. Recent analyses question whether its benefits extend to settings where the primary modelling challenge is degradation-trend extraction rather than temporal distribution shift \cite{ref25,ref26}; instance-normalisation flows \cite{ref28} present a related construction for non-stationary time series that similarly lacks evaluation in the prognostic domain. Despite this variety, to the best of our knowledge, no published study compares fleet-level, per-unit, and instance-level normalisation under a controlled, backbone-matched protocol applied simultaneously to all four CMAPSS sub-datasets.
+
+\subsection{Multi-Fault Prognostics and Routing Architectures}
+
+FD003 and FD004 contain engines degrading under two distinct failure modes --- high-pressure compressor (HPC) and fan degradation --- documented in early CMAPSS work \cite{ref07} and confirmed through cluster quality analyses in subsequent studies \cite{ref35,ref36}. Despite this structure, the majority of published CMAPSS models apply a single shared architecture to all engines without architectural distinction between single-fault and multi-fault sub-datasets.
+
+Several routing and mixture-of-experts strategies have been explored to exploit fault-mode structure in prognostics. Lodygowski and Szrama \cite{ref31} combined autoencoders with Gaussian Mixture Models (GMM) for unsupervised failure-mode identification, treating cluster assignment as a preprocessing step prior to model training. Liu et al.\ \cite{ref32} applied a mixture-of-encoders architecture conditioned on operating regime, demonstrating improved performance on multi-condition datasets. Hard-routing architectures --- in which each engine is assigned exclusively to one expert branch based on predicted fault mode --- have been applied in the multi-condition prognostics literature \cite{ref30}, but their sensitivity to routing error at test time has not been isolated from other design choices. Yang et al.\ \cite{ref44} suggest, in the context of multisource domain adaptation for fault diagnosis, that metric-learning-based gating may degrade when the distributional consistency of gating features between training and deployment is not maintained --- a reliability concern directly applicable to trajectory-derived routing features.
+
+The observation horizon available at routing time is a critical constraint on these approaches. Wang et al.\ \cite{ref49} suggest that accurate fault-mode recognition benefits substantially from partial supervisory labels, with purely unsupervised mode identification substantially less reliable in complex degradation settings. Dong et al.\ \cite{ref48} suggest, based on causal-inference experiments on N-CMAPSS, that early anomaly detection is difficult in realistic turbofan data due to nonlinear thermodynamic couplings and complex degradation dynamics. These limitations motivate approaches that defer routing until sufficient degradation history has accumulated: Fu et al.\ \cite{ref46} applied trajectory clustering over complete run-to-failure histories to identify failure modes, and Wang et al.\ \cite{ref47} proposed a joint fault-recognition prognostic framework that processes the full temporal sequence before routing. Full-trajectory strategies improve routing reliability by leveraging richer evidence, but require extended observation windows at test time. The reliability boundary among hard partitioning, soft posterior-weighted routing, and end-to-end early-cycle gating trained jointly with the prognostic objective has not been systematically evaluated under matched prognostic conditions across both multi-fault CMAPSS sub-datasets.
+
+\subsection{Loss Engineering and Asymmetric Prognostic Risk}
+
+The NASA prognostic score penalises late predictions exponentially more than early ones, reflecting the asymmetric cost structure of aviation maintenance decisions. This motivates training objectives that embed a similar asymmetry. Rengasamy et al.\ \cite{ref37,ref38} introduced dynamically weighted and asymmetric loss variants that improved NASA score on individual CMAPSS sub-datasets; Liu et al.\ \cite{ref39} proposed a multi-head network with asymmetric constraints, reporting FD001 gains; Abdullah \cite{ref22} combined asymmetric loss with attention-based interpretability, again demonstrating single-dataset improvement. Quantile regression approaches --- including Pinball loss \cite{ref40}, theoretically grounded calibrated interval estimation \cite{ref41}, and quantile mixture-of-experts formulations \cite{ref43} --- provide probabilistic prediction intervals suited to risk-averse decision-making, at the cost of point-estimate RMSE and without direct optimisation for the NASA score.
+
+A consistent limitation across these studies is the assumption of a fixed RUL-labelling scheme, typically piecewise-linear with a threshold near 125 cycles, without systematic variation of that threshold. Chung et al.\ \cite{ref41} argue that calibrated quantile coverage requires a well-conditioned label distribution; an uncapped RUL target exceeding 500 cycles on FD003 potentially violates this condition, suggesting that reported single-dataset loss-function gains may be partly confounded by the choice of labelling scheme. The interaction between the RUL clipping threshold and loss-function performance has not been evaluated under a cross-dataset design with multiple-comparison correction, leaving open whether reported single-dataset gains from custom loss functions remain statistically detectable after the clipping condition is properly controlled.
+
+\subsection{Research Gaps and Study Positioning}
+
+Four specific attribution gaps emerge from this review:
+
+\begin{enumerate}
+\item \textbf{RUL label clipping:} No prior study has varied the ceiling threshold as an isolated factor across all four CMAPSS sub-datasets, preventing quantification of its magnitude relative to architectural or loss-function effects.
+\item \textbf{Sensor normalisation:} Fleet-level, per-unit, and instance-level strategies have not been compared under a controlled, backbone-matched protocol across all four sub-datasets simultaneously.
+\item \textbf{Fault-mode routing:} The reliability boundary among hard partitioning, soft posterior-weighted routing, and end-to-end early-cycle gating has not been directly evaluated under matched prognostic conditions on both multi-fault CMAPSS sub-datasets.
+\item \textbf{Loss--clipping interaction:} Whether custom loss functions provide statistically detectable improvements over MSE after the RUL clipping condition is controlled and multiple comparisons are corrected remains unestablished.
+\end{enumerate}
+
+Accordingly, this study evaluates four pipeline factors through hypothesis-specific experiments (H1--H4), with each focal factor varied within its respective controlled setting. A supplementary protocol-unified N1--N3 analysis assesses the robustness of the principal normalisation comparison, and the resulting evidence is synthesised into an attribution-oriented staged checklist for PHM practitioners.
+
+\section{Methodology}
+
+\noindent\textbf{Problem Formulation.} Engine $i$ ($i = 1, \ldots, N$) generates a multivariate sensor time series $\mathbf{X}^{(i)} \in \mathbb{R}^{T_i \times F}$, where $T_i$ is the run-to-failure lifetime in flight cycles and $F$ is the number of input features (varies by dataset and hypothesis; see Section~III-H). The model input at cycle $t$ is a fixed-length sliding window of 30 consecutive cycles:
+\begin{equation}
+  \mathbf{W}_t^{(i)} = \mathbf{X}^{(i)}[t{-}29:t,\;:] \;\in\; \mathbb{R}^{30 \times F}
+  \label{eq:window}
+\end{equation}
+with front-zero-padding when $t < 30$. The RUL target follows a piecewise-linear formulation with clipping threshold $\tau$:
+\begin{equation}
+  y_t^{(i)} = \min\!\bigl(T_i - t,\;\tau\bigr)
+  \label{eq:rul}
+\end{equation}
+The prediction task is to learn $f : \mathbb{R}^{30 \times F} \to \mathbb{R}$ such that $f(\mathbf{W}_t^{(i)}) \approx y_t^{(i)}$ for all training cycles. At test time, $f$ is applied to the final observed window of each test engine and its output compared against the benchmark-provided ground-truth RUL. The four design variables studied in Section~IV are the clipping threshold $\tau$ (H1), the sensor preprocessing and normalisation strategy applied to $\mathbf{X}^{(i)}$ (H2), the architecture and routing mechanism of $f$ (H3), and the training objective used to optimise $f$ (H4).
+
+\subsection{Dataset}
+
+The NASA CMAPSS benchmark was used, comprising four sub-datasets (FD001–FD004) simulating turbofan engine run-to-failure under varying operating conditions and fault modes (Table I). Each dataset records 21 raw sensor channels per flight cycle together with a held-out test set and ground-truth RUL values for the final observation of each test engine.
+% Table I. CMAPSS sub-dataset characteristics
+
+\begin{table}[!t]
+\centering
+\small
+\caption{CMAPSS sub-dataset characteristics}
+\label{tab:i}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccc}
+\toprule
+\textbf{Dataset} & \textbf{Train engines} & \textbf{Test engines} & \textbf{Op. conditions} & \textbf{Fault modes} \\
+\midrule
+FD001 & 100 & 100 & 1 & HPC degradation only \\
+FD002 & 260 & 259 & 6 & HPC degradation only \\
+FD003 & 100 & 100 & 1 & HPC + Fan degradation \\
+FD004 & 249 & 248 & 6 & HPC + Fan degradation \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+Representative sensor degradation trajectories for FD003 — which contains both fault modes — are shown in Fig. 1, illustrating the visually distinct patterns that motivate fault-mode-aware modelling (H3) and fleet-level normalization (H2).
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig1}
+\caption{Illustrative sensor degradation trajectories for representative engines in FD003 (single operating condition, two fault modes). Selected sensors with high RUL correlation (s2, s3, s4, s7, s11, s12) show visually distinct degradation patterns between HPC-fault and fan-fault engines, motivating both fault-mode-aware modeling (H3) and fleet-level normalization that preserves inter-engine degradation contrast (H2).}
+\label{fig:1}
+\end{figure}
+
+
+\subsection{Data Preprocessing}
+
+Constant-variance sensor channels were removed per dataset based on zero-variance inspection of the training split. For FD001, seven channels (s1, s5, s6, s10, s16, s18, s19) were discarded, leaving 14 input features. For FD003, six channels (s1, s5, s10, s16, s18, s19) were discarded --- s6 exhibits non-zero variance in FD003 --- leaving 15 input features. For FD002 and FD004, only s16 is constant, yielding 20 features. RUL targets followed a piecewise-linear formulation: for each training engine, cycles where the remaining life exceeds a clipping threshold $\tau$ receive a constant label of $\tau$, while the final segment decreases linearly to zero. Five clipping values were evaluated ($\tau \in \{75, 100, 125, 130, \infty\}$), with $\tau = 125$ cycles serving as the standard baseline per established literature \cite{ref05,ref06}. Ground-truth test RUL values for each test engine's final observation are provided directly by the benchmark; test performance was evaluated by comparing model RUL predictions against these ground-truth labels. The piecewise labeling scheme and the effect of varying the clipping threshold are illustrated in Fig. 2.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig2}
+\caption{Piecewise linear RUL labeling scheme with threshold-based clipping. The raw RUL decreases linearly from the maximum cycle but is clipped at threshold $\tau$ to account for the healthy phase. The shaded region illustrates the effect of varying $\tau \in \{75, 100, 125, 130, \infty\}$; over-clipping truncates degradation information while removing the ceiling entirely permits unbounded targets that destabilize the NASA prognostic score.}
+\label{fig:2}
+\end{figure}
+
+
+\subsection{Operating-Condition Residualization}
+
+FD002 and FD004 contain six discrete operating conditions that shift absolute sensor levels by tens to hundreds of units. Although these conditions are identifiable via the three operating-condition columns (op1, op2, op3), those columns carry continuous floating-point values with cycle-level simulation noise --- op1 takes 536 unique values and op2 takes 105 unique values across FD002 --- making deterministic condition assignment by exact value matching infeasible. K-means ($k = 6$) was therefore applied to recover the six conditions unsupervised and to decouple degradation signals from operating-point offsets. A K-means model was fitted on the standardised op columns of the training set; per-cluster sensor means were computed from training data only and subtracted from each observation:
+\begin{equation}
+z_{i,j} = x_{i,j} - \mu_{c(i),\,j}
+\end{equation}
+
+where $c(i)$ denotes the cluster assignment of cycle $i$ and $\mu_{c,j}$ is the training-set mean of sensor $j$ within cluster $c$. This step precedes all normalization and is applied identically to training and test data using statistics derived exclusively from training engines. Post-hoc inspection confirms that each of the six K-means clusters maps to exactly one operating condition on both FD002 and FD004 (cluster purity = 1.0), validating that K-means recovers the true condition structure from the raw continuous op values. FD001 and FD003 present a single operating condition and therefore do not require this step.
+
+\subsection{Normalization Strategies (H2)}
+
+Seven normalization strategies (N1--N7) were compared to evaluate the effect of the reference-statistics choice. Fleet-level methods compute statistics across all training engines: N1 applies min-max scaling to $[0,1]$ and N2 applies z-score standardisation. Per-unit methods (N3--N6) use each engine's own early-cycle observations as the reference baseline, removing initial-condition offsets before any degradation signal is visible: N3 and N5 apply min-max and z-score over the first 5 cycles; N4 and N6 apply the same transforms over the first 10 cycles.
+
+N7 implements a forward-only variant of Reversible Instance Normalization (RevIN~\cite{ref23}) as a learnable module within the model. Each 30-cycle inference window is normalised by its instantaneous mean and standard deviation, with trainable affine parameters ($\gamma$, $\beta$). The inverse transform is not applied to the scalar RUL output: RevIN's inverse is designed to restore multi-step sensor forecasts to their original measurement units --- an operation defined for outputs that live in sensor space. Scalar RUL predictions are not in sensor space; applying the inverse transform is therefore undefined for this output type. N7 accordingly implements only the forward (normalisation) pass of RevIN, making it equivalent to per-window instance normalisation with learnable affine parameters.
+
+Formally, using the problem-formulation notation defined above: fleet-level statistics (N1, N2) aggregate over all training engines $i$ and all cycles $t$ per sensor $j$; per-unit statistics (N3--N6) aggregate over engine $i$'s first $K_0 \in \{5, 10\}$ cycles per sensor $j$; N7 aggregates over each 30-cycle inference window $\mathbf{W}_t^{(i)} \in \mathbb{R}^{30 \times F}$ per sensor $j$, with learnable affine output $\hat{x}_{\tau,j} = \gamma_j(x_{\tau,j} - \mu_{w,j})/\sigma_{w,j} + \beta_j$.
+
+N1 served as the primary comparison baseline. All strategies were evaluated on the identical backbone with all other experimental factors fixed.
+
+\begin{table}[!t]
+\centering
+\small
+\caption*{\textbf{Normalization strategies compared in H2 (N1--N7).} Fleet-level methods (N1, N2) compute statistics across all training engines; per-unit methods (N3--N6) use each engine's own early cycles as reference baseline; N7 (RevIN) applies per-window instance normalization at inference time with learnable affine parameters.}
+\label{tab:2}
+\begin{tabular}{llp{5cm}}
+\toprule
+\textbf{ID} & \textbf{Name} & \textbf{Statistics axis} \\
+\midrule
+N1 & Fleet min-max & All engines $i$, all cycles $t$, per sensor $j$ \\
+N2 & Fleet z-score & All engines $i$, all cycles $t$, per sensor $j$ \\
+N3 & Per-unit min-max (5 cy) & Engine $i$, $t \le 5$, per sensor $j$ \\
+N4 & Per-unit min-max (10 cy) & Engine $i$, $t \le 10$, per sensor $j$ \\
+N5 & Per-unit z-score (5 cy) & Engine $i$, $t \le 5$, per sensor $j$ \\
+N6 & Per-unit z-score (10 cy) & Engine $i$, $t \le 10$, per sensor $j$ \\
+N7 & RevIN-style fwd-only (learnable) & $\mathbf{W}_t^{(i)} \in \mathbb{R}^{30 \times F}$, per sensor $j$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\subsection{LSTM Backbone Architectures}
+
+The stacked LSTM was selected as the controlled backbone for this ablation for two reasons. First, LSTM-based models constitute the dominant baseline class in the CMAPSS RUL literature \cite{ref05,ref06,ref09}, making results directly comparable with prior single-factor studies. Second, a controlled ablation requires the backbone to remain fixed across conditions; substituting an attention-based encoder would conflate backbone capacity with the design factor under study, preventing clean attribution of observed differences. Whether attention mechanisms perform fault-mode separation implicitly --- rendering the explicit early-cycle GatingNet (M3) redundant over Transformer backbones --- is identified as a priority open question in \S{}V-I rather than a verified finding within the present study. The design-factor effects observed in \S{}IV therefore apply specifically to stacked LSTM architectures; generalisation to attention-based encoders requires separate evaluation.
+
+H2 used a compact LSTM backbone and H3/H4 used a full-capacity backbone; within each hypothesis, the backbone was held fixed so that observed differences reflected only the design factor under study. Each network takes a sliding window of 30 consecutive cycles as input and produces a scalar RUL estimate:
+{\small\begin{verbatim}
+H2 Backbone (compact):
+Input  (B x 30 x 17_or_18_or_23)
+-> LSTM_1 (hidden=64, full sequence) -> Dropout(0.2)
+-> LSTM_2 (hidden=32, last timestep)  -> Dropout(0.2)
+-> Linear(32->16) -> ReLU -> Linear(16->1)
+
+H3/H4 Backbone (full-capacity):
+Input  (B x 30 x 15_or_20)
+-> LSTM_1 (hidden=64, full sequence) -> Dropout(0.2)
+-> LSTM_2 (hidden=64, last timestep)  -> Dropout(0.2)
+-> Linear(64->32) -> ReLU -> Linear(32->1)
+\end{verbatim}
+}
+
+LSTM$_1$ passes its full sequence of hidden states to LSTM$_2$, preserving temporal context across layers. Test sequences shorter than 30 cycles were zero-padded at the front. Input dimensions vary by hypothesis and dataset; see Table III in Section H.
+
+\textbf{Note:} The difference in backbone capacity means that H2 and H3/H4 RMSE values are not directly comparable in absolute terms. Each hypothesis is evaluated internally relative to its own controlled baseline.
+
+\subsection{Fault-Mode Architectures (H3)}
+
+Four architectures were compared on FD003 and FD004 to assess whether explicit fault-mode separation improves RUL accuracy. When two fault modes coexist within a dataset, a single-branch model must simultaneously minimise loss across both distributions, settling in a parameter compromise that fits neither mode optimally; routing engines to fault-specific branches eliminates this competition and allows each branch to specialise. For M1 and M2, this routing follows a fixed three-step pre-training pipeline: (1) degradation-slope features are extracted from seven discriminant sensors per engine; (2) a GMM is fit on training engines only to obtain cluster assignments; (3) each engine is assigned to a branch deterministically (M1) or blended by soft posterior weights (M2). M3 bypasses GMM fitting entirely, learning routing end-to-end from only the first $K = 10$ observed cycles.
+
+\textbf{M0 (Baseline)} is a single-branch model using the shared backbone without any fault-mode handling.
+
+\textbf{M1 (Hard Routing)} trains two independent LSTM branches. Each training engine was assigned deterministically to one branch via the argmax of its GMM posterior probability; test engines were routed identically. Branches were trained independently with standard MSE. \textbf{M2 (Soft Gating)} retains two branches but replaces hard assignment with a weighted sum:
+\begin{equation}
+\hat{y}_{\text{final}} = p_0 \cdot \hat{y}_0 + p_1 \cdot \hat{y}_1
+\end{equation}
+
+where $[p_0, p_1]$ are the GMM posterior probabilities. The training loss augments the final MSE with auxiliary branch supervision:
+\begin{equation}
+\mathcal{L}_{\text{M2}} = \text{MSE}(\hat{y}_{\text{final}},\, y) + 0.1\cdot\text{MSE}(\hat{y}_0,\, y) + 0.1\cdot\text{MSE}(\hat{y}_1,\, y)
+\end{equation}
+
+\textbf{M3 (Attention Gate)} eliminates the GMM entirely. A lightweight GatingNet reads only the first K = 10 observed cycles and produces end-to-end soft routing weights:
+\begin{multline}
+\text{GatingNet}: (B \times K \times F) \to \text{Flatten} \\
+\to \text{Linear}(K{\cdot}F \to 32) \to \text{ReLU} \to \text{Linear}(32 \to 2) \to \text{Softmax}
+\end{multline}
+
+The final prediction is $\hat{y}_{\text{final}} = w_0\hat{y}_0 + w_1\hat{y}_1$ with training loss:
+\begin{equation}
+\mathcal{L}_{\text{M3}} = \text{MSE}(\hat{y}_{\text{final}},\, y) + 0.05\cdot\text{MSE}(\hat{y}_0,\, y) + 0.05\cdot\text{MSE}(\hat{y}_1,\, y)
+\end{equation}
+
+By reading only early-cycle data, M3 avoids any dependence on late-cycle observations that are unavailable at real deployment time and is immune to the test-time cluster-distribution collapse that makes M1 unreliable on FD004.
+
+% Table II. Computational complexity of H3 architectures (FD003, F = 15 features)
+% Parameter counts verified by direct model inspection. FLOPs computed analytically per inference window (batch = 1, window = 30 cycles) using the standard LSTM FLOPs formula: 8 × (input + hidden) × hidden per timestep. Inference latency measured on NVIDIA RTX GPU (2,000 runs, batch = 1, after 200-run warm-up; mean ± std reported). Training time is GPU compute per epoch on FD003 (~13,600 training sequences, batch = 256), excluding data loading. M1 routes each test engine to a single branch via GMM argmax, so its inference FLOPs equal M0's.
+
+\begin{table}[!t]
+\centering
+\small
+\caption{Computational complexity of H3 architectures (FD003, $F$ = 15 features)}
+\label{tab:ii}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lllll}
+\toprule
+\textbf{Model} & \textbf{Parameters} & \textbf{FLOPs / window} & \textbf{Inference (measured)} & \textbf{Training (GPU)} \\
+\midrule
+M0 (single branch) & 56.1K & 3.18M & 0.24 ± 0.05 ms & ~0.1 s/epoch \\
+M1 (hard routing) & 112.3K & 3.18M† & 0.25 ± 0.06 ms† & ~0.2 s/epoch‡ \\
+M2 (soft gating) & 112.3K & 6.37M & 0.57 ± 0.24 ms & ~0.2 s/epoch \\
+M3 (attention gate, K=10) & 117.2K & 6.38M & 0.64 ± 0.21 ms & ~0.2 s/epoch \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+†M1 activates one branch at inference (GMM argmax); both branches (112.3K) reside in memory but only one branch forward pass executes.  ‡M1 trains two branches sequentially; reported time is total per epoch.
+
+M3's GatingNet adds only 4.9K parameters above M1/M2 (< 5\% overhead), confirming that performance differences across architectures are not attributable to additional model capacity. The approximately 2× parameter increase from M0 to M3 reflects the two independent prediction branches rather than the gating mechanism itself. All four architectures are well within the computational budget of embedded PHM controllers, which typically support models of up to several hundred thousand parameters.
+
+For M1 and M2, GMM cluster assignments (k = 2, full covariance) were derived by unsupervised fitting on degradation-slope features of seven discriminant sensors identified by EDA (s15, s20, s21, s7, s12, s2, s4). The inter-cluster discriminability of each sensor is quantified by its inter-cluster z-score:
+\begin{equation}
+|\Delta z|_j = \frac{|\bar{\mu}_{c=1,j} - \bar{\mu}_{c=2,j}|}{\sigma_{\text{fleet},j}}
+\end{equation}
+
+where $\bar{\mu}_{c,j}$ is the training-set mean of sensor $j$ within cluster $c$, and $\sigma_{\text{fleet},j}$ is the fleet-wide standard deviation of sensor $j$. Both branches in M2 and M3 use the full shared backbone.
+
+\subsection{Loss Functions (H4)}
+
+Seven training loss functions were evaluated to determine whether asymmetric or dynamically weighted objectives improve over standard MSE. All functions share the signature \texttt{loss(pred, true, life\_ratio=None)}, where life_ratio = 1 − RUL/RUL_max is a training-time weighting signal computed from training-set cycle counts only; it is set to None at inference time, eliminating any dependency on unknown test-set engine lifetimes.
+
+\begin{table}[!t]
+\centering
+\small
+\caption*{\textbf{Loss functions evaluated in H4 (L1--L7).} All functions share the signature \texttt{loss(pred, true, life\_ratio=None)}; \texttt{life\_ratio} is a training-time weighting signal set to \texttt{None} at inference to avoid dependency on unknown test-set engine lifetimes.}
+\label{tab:4}
+\begin{tabular}{lll}
+\toprule
+\textbf{ID} & \textbf{Name} & \textbf{Key formulation} \\
+\midrule
+L1 & MSE (baseline) & $(1/N)\sum (\hat{y}-y)^2$ \\
+L2 & NASA Score Loss & Differentiable approx.\ of $s(d)$ \\
+L3 & DynMSE & $(1+\lambda_{\text{dyn}}{\cdot}r)(\hat{y}-y)^2$;\ $\lambda_{\text{dyn}}=1.0$ \\
+L4 & Focal-RUL & $({\|\hat{y}-y\|}/{(\|\hat{y}-y\|+1)})^{\gamma}(\hat{y}-y)^2$;\ $\gamma=2$ \\
+L5 & TWA & $w_{\text{time}}{\cdot}w_{\text{asym}}{\cdot}(\hat{y}-y)^2$;\ $\lambda_t=10,\,\lambda_a=1$ \\
+L6 & Pinball & $\tau\max(0,y{-}\hat{y})+(1{-}\tau)\max(0,\hat{y}{-}y)$;\ $\tau=0.25$ \\
+L7 & HubA & $\text{Huber}(\delta{=}20){\cdot}w_{\text{asym}}$;\ $\lambda_a=3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+For L5 (TWA), $w_{\text{time}} = 1 + \lambda_t \cdot r$ and $w_{\text{asym}} = 1$ if $d < 0$, else $\lambda_a$. For L7, $w_{\text{asym}} = 1$ if $d < 0$, else $\lambda_a$, where $d = \hat{y} - y$. Key hyperparameters ($\tau, \lambda_t, \lambda_a, \delta$) were selected via grid search on FD001 before cross-dataset evaluation. FD001 therefore functions as a partially tuned evaluation dataset for H4; nominally strong FD001-specific effects (particularly L5 and L7) should be interpreted with this caveat. BH-FDR correction across all four datasets partially mitigates this optimism.
+
+\subsection{Training Configuration}
+
+All models were optimised with Adam (learning rate $1\times10^{-3}$, weight decay $1\times10^{-4}$) with a batch size of 256, for a maximum of 100 epochs. Early stopping monitored validation loss with patience of 15 epochs and restored the best-performing checkpoint. The validation set was constructed by engine-level holdout: 20\% of training engines were withheld, and all cycles of those engines were excluded from training. This prevented the RUL distribution mismatch that arises from cycle-level splitting. Each experimental configuration was run with five random seeds (0, 1, 2, 3, 4); results are reported as mean ± standard deviation across seeds.
+
+\begin{table}[!t]
+\centering
+\small
+\caption*{\textbf{Training configuration for H2--H4 LSTM experiments.} All hyperparameters are held constant across hypotheses; variation in backbone capacity and feature set is described separately in Table~\ref{tab:iii}.}
+\label{tab:5}
+\begin{tabular}{ll}
+\toprule
+\textbf{Hyperparameter} & \textbf{Value} \\
+\midrule
+Optimizer & Adam \\
+Learning rate & $1\times10^{-3}$ \\
+Weight decay & $1\times10^{-4}$ \\
+Batch size & 256 \\
+Max epochs & 100 \\
+Early-stop patience & 15 (val loss) \\
+Validation split & Engine-level, 20\% of engines \\
+Sliding window & 30 cycles \\
+Random seeds & {0, 1, 2, 3, 4} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+The feature set and validation-split method differ across hypotheses, as shown in Table III. These differences were established independently during implementation and mean that the hypotheses are not directly cross-comparable in absolute RMSE.
+% Table III. Feature set, validation split, and backbone by hypothesis
+
+\begin{table}[!t]
+\centering
+\small
+\caption{Feature set, validation split, and backbone by hypothesis}
+\label{tab:iii}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llll}
+\toprule
+\textbf{Hypothesis} & \textbf{Feature set} & \textbf{Val split method} & \textbf{Backbone} \\
+\midrule
+H1 & Sensors + op cols (OLS) & N/A (deterministic OLS) & Linear regression (OLS) \\
+H2 & Sensors + op cols (incl. op1/op2/op3) & Last 20\% by unit ID (deterministic) & Compact LSTM (LSTM$_2$ hidden=32) \\
+H3 & Sensors only (no op cols) & Deterministic 20\% (engine shuffle, seed = 42); 30-epoch min.\ warm-up & Full LSTM (LSTM$_2$ hidden=64) \\
+H4 & Sensors only (no op cols) & Deterministic 20\% (last 20\% of engines by unit ID) & Full LSTM (LSTM$_2$ hidden=64) \\
+\bottomrule
+\end{tabular}%
+}
+\end{table}
+
+
+For H2 the resulting input dimension F is 17 (FD001: 14 sensors + 3 op), 18 (FD003: 15 sensors + 3 op), or 23 (FD002/FD004 after residualisation: 20 sensors + 3 op). For H3/H4 F is 14 (FD001), 15 (FD003), or 20 (FD002/FD004 after residualisation). \textbf{Note:} The feature and split differences between H2 and H3 reflect independent implementation choices made prior to analysis; they mean that the two hypotheses are not directly cross-comparable in absolute RMSE terms. Each hypothesis is interpreted relative to its own baseline condition.
+
+\subsection{Evaluation Metrics}
+
+Two metrics were reported across all experiments. RMSE is the primary performance indicator:
+\begin{equation}
+\text{RMSE} = \sqrt{\frac{1}{N}\sum_{i=1}^{N}(\hat{y}_i - y_i)^2}
+\end{equation}
+
+The NASA prognostic score penalises late predictions more severely than early ones:
+\begin{equation}
+s(d) = \begin{cases} e^{-d/13} - 1 & d < 0 \\ e^{d/10} - 1 & d \geq 0 \end{cases}, \qquad
+\text{NASA Score} = \frac{1}{N}\sum_{i=1}^{N} s(\hat{y}_i - y_i)
+\end{equation}
+
+where $d = \hat{y} - y$ and $N$ is the number of test engines. NASA Score is lower-is-better; a perfect prediction yields zero. This formulation reports the \textit{mean NASA penalty per test engine}, enabling cross-dataset comparability; to obtain the total sum reported in some prior works, multiply by $N$ (100 engines for FD001/FD003, 259 for FD002, 248 for FD004).
+
+\subsection{Statistical Testing}
+
+Statistical comparisons differed in sample unit by hypothesis. For H1 (linear regression, deterministic), comparisons used a two-sided Mann-Whitney U test (\texttt{scipy.stats.ranksums}) on per-engine RMSE values ($N \approx 100$--259 per dataset; see Section~III-K). For H2 and H4 (LSTM, stochastic), comparisons used one-sided Wilcoxon rank-sum tests on per-seed aggregate metrics (N = 5), testing whether the treatment condition improves over baseline. For H3, both improvement and degradation directions were of interest; M2 and M3 were tested for improvement over M0 (one-sided, treatment RMSE $<$ baseline RMSE), while M1 was tested for significant degradation relative to M0 (one-sided, M1 RMSE $>$ M0), reflecting the different design role of hard-routing architectures. All tests used $\alpha = 0.05$ before correction. When multiple treatment conditions are compared simultaneously within one hypothesis, raw p-values were corrected using the Benjamini-Hochberg (BH) procedure at $\alpha_{\text{FDR}} = 0.05$. A result was considered statistically meaningful when both $p_{\text{BH}} < 0.05$ \textbf{and} Cohen's $d \geq 0.3$ (small effect threshold). Conditions satisfying the p-value criterion but yielding $|d| < 0.1$ are reported as "statistically significant but practically negligible" to distinguish statistical from practical significance. For context, a Cohen's d of 0.3 at the FD001 RMSE baseline of approximately 14–16 cycles corresponds to a mean RMSE difference of approximately 0.6–1.0 cycles — a gap comparable to one cycle of maintenance scheduling uncertainty in typical PHM deployment contexts.
+
+\subsection{H1 Baseline Model (Linear Regression)}
+
+\begin{sloppypar}
+The RUL clipping study (H1) used ordinary least squares linear regression (\texttt{sklearn.linear\_model.LinearRegression}, no regularisation) as its predictive model. Linear regression was chosen to isolate the effect of label engineering from non-linear model capacity: the clipping threshold's effect on RUL label distribution is architecture-independent, and a deterministic closed-form baseline eliminates random-initialisation variance. Each of the 20 experimental configurations (5 clip values × 4 datasets) was run exactly once; the model has no random state and produces identical results on identical data. The statistical comparison for H1 used the Mann-Whitney U test (\texttt{scipy.stats.ranksums}, unpaired, two-sided) on per-engine RMSE values ($N \approx 100$--259 per dataset depending on sub-dataset). Note that this is technically an unpaired test; a paired Wilcoxon signed-rank test would be marginally more statistically efficient since the same test engines are evaluated under both clip conditions, and this limitation should be borne in mind when interpreting H1 significance levels.
+\end{sloppypar}
+
+\section{Results}
+
+\subsection{Effect of RUL Clipping (H1)}
+
+\textbf{clip = 125 cycles yielded the lowest or tied-lowest RMSE on all four sub-datasets.} The full matrix of results is presented in Table IV. On FD001 and FD003 (single operating condition), clip = 125 was the clear optimum (RMSE = 21.90 and 21.62, respectively). On FD002 and FD004, clip = 130 produced a marginally lower RMSE (Δ = −0.57 cycles on both), but the difference did not approach statistical significance (Mann-Whitney U, two-sided, p = 0.97 on each; BH-FDR applied). No tested alternative threshold achieved a statistically significant improvement over clip = 125, confirming its status as the practically validated standard \cite{ref05,ref06}. Aggressive clipping at clip = 75 was significantly inferior on all four datasets ($\Delta$ RMSE = +10.5 to +16.2 cycles; $p \leq 0.028$), indicating that excessive truncation discards degradation signal in the upper RUL range. These findings were consistent with earlier single-dataset reports that converged empirically on 125 cycles \cite{ref05,ref06} and extend them to a rigorous four sub-dataset evaluation.
+
+\textbf{Removing the RUL ceiling entirely was catastrophic on FD003.} At clip = None, the NASA prognostic score on FD003 reached 4,014,724 --- a 306,000-fold increase over clip = 125 (13.09) --- while FD004 exploded to 1,759 (35.4$\times$). The mechanism is the asymmetric exponential NASA metric: late predictions are penalised by $\exp(d/10)$, which grows unboundedly as the model, trained on uncapped labels exceeding 500 cycles, systematically over-predicts RUL throughout the test trajectory.
+
+RMSE was also significantly elevated on FD001 (31.90 vs 21.90; p = 0.006) and FD004 (46.99 vs 34.61; p = 0.002), though less extreme than the NASA Score collapse. FD002 was substantially more robust (RMSE = 33.05; p = 0.054), likely because its 260 training engines and six operating conditions provided sufficient distributional support for the model to learn a conservative bias without an explicit ceiling. FD003's disproportionate RMSE increase --- 159\% versus FD001's 46\%, despite both having a single operating condition --- may in part reflect FD003's bimodal fault-mode structure (Section~IV-C), where unbounded targets spanning two distinct degradation-lifetime populations could compound the over-prediction bias.
+
+This dataset-dependent sensitivity confirmed that clip = 125 cannot be treated as universally optimal, but it remains the safest default across the full benchmark. Fig.~3 presents the complete RMSE matrix.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig3}
+\caption{RMSE heatmap across four CMAPSS sub-datasets (FD001–FD004) and five clipping thresholds (mean over 20 runs, linear regression baseline). clip = 125 achieves the lowest or near-lowest RMSE in all datasets. The absence of clipping (clip = None) produces catastrophic RMSE on FD003 (56.1 cycles) where unbounded targets amplify early-life residuals exponentially.}
+\label{fig:3}
+\end{figure}
+
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{RUL clipping threshold comparison (H1): mean RMSE and NASA prognostic score across five clipping thresholds on four CMAPSS sub-datasets (linear regression (OLS), 20 runs per configuration).}
+\label{tab:iv}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccccccc}
+\toprule
+\multirow{2}{*}{\textbf{Clip ($\tau$)}} & \multicolumn{2}{c}{\textbf{FD001}} & \multicolumn{2}{c}{\textbf{FD002}} & \multicolumn{2}{c}{\textbf{FD003}} & \multicolumn{2}{c}{\textbf{FD004}} \\
+\cmidrule(lr){2-3}\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}
+ & RMSE & NASA & RMSE & NASA & RMSE & NASA & RMSE & NASA \\
+\midrule
+75 & 33.65 & 26.49 & 47.37 & 615.74 & 32.48 & 27.36 & 50.83 & 451.22 \\
+100 & 24.51 & 10.93 & 37.67 & 173.05 & 23.00 & 9.11 & 40.37 & 110.29 \\
+125$^\dagger$ & \textbf{21.90} & 13.14 & 32.39 & 70.48 & \textbf{21.62} & 13.09 & 34.61 & 49.69 \\
+130 & 22.06 & 14.84 & \textbf{31.83} & \textbf{62.52} & 22.24 & 16.17 & \textbf{34.04} & \textbf{47.21} \\
+None & 31.90 & 132.21 & 33.05 & 116.92 & 56.09 & 4{,}014{,}724 & 46.99 & 1{,}758.56 \\
+\bottomrule
+\end{tabular}%
+}\\[3pt]
+\begin{minipage}{\linewidth}
+\footnotesize\textit{Bold = lowest RMSE (or NASA) per dataset. $^\dagger$clip=125: validated standard \cite{ref05,ref06}; clip=130 achieves marginally lower RMSE on FD002/FD004 (p=0.97, not significant). clip=None yields catastrophic NASA Score on FD003 (4,014,724 vs.\ 13.09 at clip=125).}
+\end{minipage}
+\end{table}
+
+
+\subsection{Effect of Normalization Strategy (H2)}
+
+\textbf{Normalization outcomes differ sharply between FD003 and the remaining three sub-datasets.} FD003 serves as the sole exception to an otherwise consistent pattern and is therefore addressed first.
+
+On FD001, FD002, and FD004, fleet min-max (N1) achieved the lowest RMSE: 14.14 $\pm$ 0.22, 14.31 $\pm$ 0.10, and 14.60 $\pm$ 0.30 cycles, respectively. All per-unit strategies (N3--N6) were significantly inferior on FD001 ($\Delta$RMSE = +3.8 to +6.6; p$_\text{BH}$ = 0.011; $d$ = 2.3--7.6) and FD002 ($\Delta$RMSE = +1.2 to +4.2; p$_\text{BH}$ = 0.011; $d$ = 4.2--22.4). On CMAPSS, inter-engine sensor variation is modest relative to degradation magnitude; fleet-level statistics therefore preserve more discriminative information than engine-local references.
+
+RevIN (N7) was likewise significantly inferior on FD001 ($\Delta$RMSE = +0.78; p$_\text{BH}$ = 0.011; $d$ = 1.66), FD002 (+3.85; $d$ = 20.0), and FD004 (+3.68; $d$ = 6.19), despite its learnable affine parameters (Table V). RevIN \cite{ref23} excels at multi-step forecasting under temporal distribution shift \cite{ref28}, but on CMAPSS the dominant challenge is extracting a shared degradation signature across engines --- a context in which per-window adaptation is counterproductive. Fleet z-score (N2) showed no significant difference from N1 on FD001/FD002/FD003, indicating that the fleet-vs-per-unit distinction matters more than the specific scaling transform. Figs.~4 and 5 visualise the full RMSE matrix and the pairwise statistical comparison against N1.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig4}
+\caption{Mean RMSE heatmap (5 seeds) for seven normalization strategies (N1–N7) across four CMAPSS sub-datasets. Fleet min-max (N1) achieves the lowest RMSE on FD001 (14.14), FD002 (14.31), and FD004 (14.60). Per-unit methods (N3–N6) consistently underperform by removing between-engine degradation contrast. The anomalously high variance of N1 on FD003 (std = 12.86) reflects a training-protocol interaction (backbone capacity and validation-split configuration); it resolved to std = 0.67 under a backbone-matched protocol (§IV-C).}
+\label{fig:4}
+\end{figure}
+
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig5}
+\caption{Pairwise statistical comparison of each normalization method against fleet min-max (N1) using the Wilcoxon rank-sum test with Benjamini-Hochberg FDR correction ($\alpha = 0.05$). Effect sizes are reported as Cohen's \textit{d}. Per-unit methods (N3–N6) and RevIN (N7) are significantly inferior on FD001, FD002, and FD004 ($|\textit{d}| \geq 1.66$ in all significant cases). FD003 shows no significant differences due to high seed-to-seed variance under this protocol (std = 12.86, a training-protocol artifact; see §IV-C).}
+\label{fig:5}
+\end{figure}
+
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Normalization strategy comparison (H2): RMSE (mean$\pm$std, 5 seeds) and statistical significance versus fleet min-max baseline (N1) across four CMAPSS sub-datasets.}
+\label{tab:v}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccccccc}
+\toprule
+\multirow{2}{*}{\textbf{ID}} & \multirow{2}{*}{\textbf{Description}} & \multicolumn{4}{c}{\textbf{RMSE (mean$\pm$std)}} & \multicolumn{4}{c}{\textbf{Sig.\ vs N1 (BH-FDR)}} \\
+\cmidrule(lr){3-6}\cmidrule(lr){7-10}
+ & & \textbf{FD001} & \textbf{FD002} & \textbf{FD003} & \textbf{FD004} & \textbf{FD001} & \textbf{FD002} & \textbf{FD003} & \textbf{FD004} \\
+\midrule
+N1 (Fleet MinMax) & Fleet-level min-max scaling & \textbf{14.14$\pm$0.22} & \textbf{14.31$\pm$0.10} & 19.05$\pm$12.86 & \textbf{14.60$\pm$0.30} & --- & --- & --- & --- \\
+N2 (Fleet Std)    & Fleet-level z-score          & 14.38$\pm$0.81 & 14.83$\pm$0.55 & \textbf{14.69$\pm$0.71} & 15.33$\pm$0.12 & No & No & No & Yes* \\
+N3 (PU MinMax 5\%)  & Per-engine min-max (5th pct) & 19.15$\pm$0.58 & 18.28$\pm$0.15 & 19.65$\pm$1.09 & 18.02$\pm$0.76 & Yes** & Yes** & No & Yes** \\
+N4 (PU MinMax 10\%) & Per-engine min-max (10th pct) & 19.66$\pm$0.87 & 15.52$\pm$0.32 & 17.35$\pm$0.54 & 16.49$\pm$0.18 & Yes** & Yes** & No & Yes** \\
+N5 (PU Std 5\%)   & Per-engine z-score (5th pct) & 20.78$\pm$0.78 & 18.49$\pm$0.49 & 21.52$\pm$1.68 & 18.76$\pm$0.33 & Yes** & Yes** & No & Yes** \\
+N6 (PU Std 10\%)  & Per-engine z-score (10th pct) & 17.90$\pm$1.84 & 16.11$\pm$0.22 & 18.65$\pm$1.41 & 16.62$\pm$0.36 & Yes** & Yes** & No & Yes** \\
+N7 (RevIN)        & Reversible instance normalization & 14.92$\pm$0.48 & 18.16$\pm$0.27 & 16.44$\pm$0.36 & 18.28$\pm$0.66 & Yes* & Yes** & No & Yes** \\
+\bottomrule
+\end{tabular}%
+}\\[3pt]
+\begin{minipage}{\linewidth}
+\footnotesize\textit{Bold = best (lowest) RMSE per dataset. *p$<$0.05 \quad **p$<$0.01 (Wilcoxon rank-sum, Benjamini-Hochberg FDR correction, $\alpha$=0.05). FD003 N1 high variance (std=12.86) is a training-protocol artifact (backbone capacity and validation-split interaction); resolved to std=0.67 under a backbone-matched protocol (§IV-C).}
+\end{minipage}
+\end{table}
+
+
+\textbf{FD003 was the sole dataset where no normalization strategy separated from N1.} N1 achieved RMSE = 19.05 $\pm$ 12.86 on FD003 --- the inter-seed standard deviation of 12.86 anomalously high relative to $\leq$1.84 on all other dataset-normaliser combinations --- and all competitors showed p$_\text{BH}$ $\geq$ 0.14. (Note: H2 N1/FD003 RMSE = 19.05 $\pm$ 12.86 and H3 M0/FD003 RMSE = 12.97 $\pm$ 0.67 reflect genuinely different experimental conditions --- backbone architecture, input features, validation split method, and test-prediction clipping all differ between the two hypotheses (Table~III). Each baseline is interpreted only against its own controlled conditions.)
+
+Notably, however, this elevated variance was confined to N1 alone: RevIN (N7) achieved 16.44 $\pm$ 0.36 and N4 achieved 17.35 $\pm$ 0.54, both with narrow distributions. N1's per-seed RMSE spanned approximately 7 to 43 cycles --- a profile inconsistent with normalisation failure and indicative of a latent bimodal data structure rather than optimisation noise.
+
+As detailed in Section~IV-C, FD003 contains two concurrent fault modes (HPC and fan degradation). The training sample drawn by each random seed determined which fault mode the single-branch model primarily learned, producing the observed inter-seed bimodality. However, the protocol-unified analysis (Section~IV-C) demonstrates that this variance is also sensitive to backbone capacity and validation-split configuration; the fault-mode structure may amplify the instability but is not its sole cause.
+
+\subsection{Protocol-Unified Robustness Analysis}
+\label{subsec:norm_robust}
+
+To evaluate whether the core fleet-versus-per-unit contrast was robust to the hypothesis-specific implementation choices of H2, N1 and N3 were re-evaluated under a unified protocol across all four sub-datasets. The unified experiment used the full-capacity backbone (LSTM2 hidden = 64, matching H3), per-seed random engine-level validation splits, and operating-condition residualization with the op columns removed after residualization --- the same configuration as H3 --- with 5 seeds per condition (40 runs total: 2 normalisers $\times$ 5 seeds $\times$ 4 datasets). Test-set predictions were clipped to [0, 125] before evaluation. Results are reported as mean $\pm$ std RMSE over 5 seeds, with Wilcoxon rank-sum tests (one-sided: N3 vs N1, H$_a$: N3 RMSE $>$ N1 RMSE) and Benjamini-Hochberg FDR correction applied across the four datasets simultaneously (Table~VI).
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Protocol-unified N1 vs N3 robustness analysis: RMSE (mean$\pm$std, 5 seeds), effect size, and BH-FDR-corrected significance using a backbone-matched unified protocol (LSTM2 hidden = 64, per-seed validation split, op columns removed after residualization).}
+\label{tab:va}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{lcccccc}
+\toprule
+\textbf{Dataset} & \textbf{N1 RMSE} & \textbf{N3 RMSE} & \textbf{$\Delta$RMSE} & \textbf{Cohen's $d$} & \textbf{p$_\text{BH}$} & \textbf{Conclusion} \\
+\midrule
+FD001 & 13.59$\pm$0.17 & 18.61$\pm$0.51 & +5.02 & 13.15 & 0.009 & N1 superior \\
+FD002 & 15.84$\pm$0.40 & 17.98$\pm$0.76 & +2.15 & 3.53  & 0.009 & N1 superior \\
+FD003 & 12.97$\pm$0.67 & 21.34$\pm$1.25 & +8.36 & 8.34  & 0.009 & N1 superior \\
+FD004 & 17.92$\pm$2.50 & 18.51$\pm$2.05 & +0.59 & 0.26  & 0.46  & No detectable difference \\
+\bottomrule
+\end{tabular}%
+}\\[3pt]
+\begin{minipage}{\linewidth}
+\footnotesize\textit{$\Delta$RMSE = N3 $-$ N1 (positive = N1 better). Wilcoxon rank-sum, one-sided (H$_a$: N3 RMSE $>$ N1 RMSE), BH-FDR corrected ($\alpha = 0.05$, 4 simultaneous comparisons). p$_\text{BH}$ = 0.009 is the minimum achievable adjusted p-value given N = 5 and the one-sided direction.}
+\end{minipage}
+\end{table}
+
+Fleet min-max significantly outperformed per-unit min-max on FD001, FD002, and FD003 (all p$_\text{BH}$ = 0.009), with large effect sizes ($d$ = 13.15, 3.53, and 8.34, respectively). On FD004, the difference was small and not statistically detectable ($\Delta$RMSE = 0.59, $d$ = 0.26, p$_\text{BH}$ = 0.46). The fleet advantage on FD001 and FD002 was therefore confirmed across both protocols; the conclusions for FD003 and FD004 are protocol-sensitive.
+
+The null result on FD004 is attributable to a feature-set difference between the two protocols. In the original H2 experiment, the op1/op2/op3 columns were retained as direct model inputs alongside the residualized sensor values (17--23 features per dataset). In the unified protocol, the op columns were removed after residualization (15 sensor features per dataset), matching the H3 configuration. On FD004 --- which has six discrete operating conditions --- the explicit op labels amplify the fleet normalisation advantage: with op columns present, fleet statistics capture cross-condition degradation trajectories more effectively relative to per-unit references, whereas after residualization most of the operating-condition contrast is absorbed before normalisation is applied. The disappearance of the N1--N3 difference on FD004 under the unified protocol reflects this feature-set interaction rather than genuine normalisation equivalence. Collectively, the unified analysis confirmed cross-protocol robustness on FD001 and FD002, while identifying protocol sensitivity on FD003 and FD004.
+
+\subsection{Fault-Mode Architectures (H3)}
+
+\subsubsection{D.1 Unsupervised Cluster Quality}
+
+Before evaluating branch architectures, the presence of two distinct fault modes in FD003 and FD004 was verified. GMM clustering (k = 2) on combined late-cycle means and degradation slopes of seven discriminant sensors yielded Silhouette scores of 0.761 (FD003, AB_full variant) and 0.750 (FD004, AB_full), both well above the conventional quality threshold of 0.50 \cite{ref35}. Slope-only clustering (AB_slope), which controls for possible life-length confounding, yielded Silhouette = 0.702 (FD003) and 0.683 (FD004), confirming that the two clusters reflect genuine sensor-trajectory differences rather than an artefact of unequal engine lifetimes. Sensor s15 (bypass pressure ratio) exhibited the largest inter-cluster z-score (|Δz| = 31.3), followed by s20 (HPT bleed, 16.0) and s21 (LPT bleed, 15.2), consistent with the known distinction between HPC-dominated and fan-dominated degradation pathways in CMAPSS FD003/FD004 \cite{ref36}. Fig. 6 summarises the cluster quality metrics across all feature variants.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig6}
+\caption{GMM (\textit{K} = 2) clustering results for FD003 and FD004. (a) Silhouette scores across three feature variants (AB_full, AB_slope, AB_late); AB_late achieves the highest separation (FD003: 0.858, FD004: 0.855). (b) BIC scores confirming \textit{K} = 2 as the optimal cluster count. The AB_full variant (Silhouette $\geq 0.75$ on both datasets) is used in Phase 2 to retain temporal diversity across the full engine lifetime.}
+\label{fig:6}
+\end{figure}
+
+
+\subsubsection{D.2 FD003: Hard Routing Failure and Fault-Mode Architecture Results}
+
+\textbf{GMM hard-routing (M1) significantly degraded FD003 RMSE relative to the single-branch baseline.} Detailed results appear in Table VII. Under a corrected experimental protocol --- using the per-run training seed for validation split, a 30-epoch minimum warmup, and evaluation clipping to [0, 125] cycles --- M0 yielded RMSE = 12.97 ± 0.67 cycles and NASA Score = 497 ± 149. GMM hard-routing (M1) regressed substantially to RMSE = 33.25 ± 8.74 cycles (+156\%; Wilcoxon p = 0.0045, $d$ = 2.82). The large standard deviation (8.74 cycles) indicates that hard-routing quality was highly sensitive to the random training split: GMM labels derived from trajectory-level statistics produced markedly different branch assignments across seeds, leading to unstable per-seed RMSE outcomes.
+
+GMM soft-gating (M2) recovered to RMSE = 12.28 ± 0.57 cycles. M2 yielded a numerically lower RMSE than M0 (12.28 vs 12.97; $d$ = $-$1.06), but the difference was not statistically detectable with five seeds (p = 0.31; the large effect size may warrant further investigation with a larger seed set). Weighted branch aggregation avoids the assignment instability of hard partitioning without providing statistically detectable improvement over the single-model baseline. M3, which replaced the GMM entirely with a lightweight GatingNet trained end-to-end on the first K = 10 observed cycles, achieved RMSE = 13.24 ± 1.69 cycles (NASA Score = 550 ± 283). M3 did not differ detectably from M0 (p = 0.75; $d$ = 0.24); the 0.27-cycle mean difference is practically negligible. Compared with CAELSTM \cite{ref15} (RMSE = 13.40 on FD003), M3 achieved comparable accuracy without fault-mode supervision or convolutional autoencoder pre-training; this comparison should be treated as indicative rather than definitive given backbone capacity differences. The inter-seed spread of M3 (std = 1.69) was slightly wider than M0 (std = 0.67), reflecting seed-to-seed variability in GatingNet random initialisation.
+
+A post-hoc sensitivity analysis varying $K \in \{5, 10, 15, 20, 30\}$ revealed that M3 RMSE was largely insensitive to the number of initial cycles used for routing. K = 5 already achieved RMSE = 14.23 ± 0.34, confirming that fault-mode identity is detectable from as few as five initial flight cycles. Fig. 7 compares all four architectures on FD003 and FD004 in terms of RMSE mean and inter-seed variance.
+
+GatingNet confidence on FD003 was 0.727 ± 0.165 (mean $\max(w_0, w_1)$ over training engines), indicating moderately decisive routing --- consistent with the Silhouette score of 0.761 confirming fault-mode separability on this dataset.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig7}
+\caption{RMSE comparison (mean ± std, 5 seeds) of four fault-mode separation architectures on FD003 and FD004. GMM hard routing (M1) significantly degrades RMSE on both multi-fault datasets (FD003: 33.25 ± 8.74, +156\%; FD004: 33.28 ± 2.05, +76\%) relative to M0 (FD003: 12.97 ± 0.67; FD004: 18.96 ± 3.97). Soft gating (M2) and end-to-end attention routing (M3) avoid this degradation without statistically detectable improvement over the single-branch baseline.}
+\label{fig:7}
+\end{figure}
+
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Fault-mode architecture comparison (H3): RMSE (mean$\pm$std, 5 seeds) on FD003 and FD004.}
+\label{tab:vi}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccc}
+\toprule
+\textbf{Model} & \textbf{Architecture} & \textbf{FD003 RMSE} & \textbf{FD003 vs M0} & \textbf{FD004 RMSE} & \textbf{FD004 vs M0} \\
+\midrule
+M0 & Single LSTM (baseline)            & 12.97$\pm$0.67  & ---                         & 18.96$\pm$3.97 & --- \\
+M1 & Hard Routing (GMM-assigned)        & 33.25$\pm$8.74  & $+$156\%$^\dagger$           & 33.28$\pm$2.05 & $+$76\%$^\dagger$ \\
+M2 & Soft Gating (GMM probability)      & \textbf{12.28$\pm$0.57}  & p=0.31 (equiv.)     & \textbf{18.82$\pm$1.56} & p=0.44 (equiv.) \\
+M3 & Attention Gate (end-to-end, K=10)  & 13.24$\pm$1.69  & p=0.75 (equiv.)             & 17.30$\pm$1.04 & p=0.31 (equiv.) \\
+\bottomrule
+\end{tabular}%
+}\\[3pt]
+\begin{minipage}{\linewidth}
+\footnotesize\textit{Bold = best (lowest) RMSE per dataset. $^\dagger$p=0.0045 vs M0 (Wilcoxon rank-sum, BH-FDR; $d$=2.82/3.64). M1 degradation on FD004 due to test-time cluster assignment collapse (247:1 ratio). M2 and M3 avoid hard-routing failure without statistically detectable improvement over M0.}
+\end{minipage}
+\end{table}
+
+
+\subsubsection{D.3 FD004: Cluster Collapse Under Hard Routing}
+
+\textbf{Hard routing (M1) degraded below the baseline on FD004.} M0 achieved RMSE = 18.96 ± 3.97 on FD004; M1 regressed to 33.28 ± 2.05, a 75.5\% increase (p = 0.0045, $d$ = 3.64). Post-hoc inspection of test-time cluster assignments revealed the root cause: 247 of 248 test engines were assigned to the same branch by the GMM argmax, compared with an approximately balanced assignment during training. The root mechanism is a feature distribution shift at test time: the GMM was fitted on complete run-to-failure trajectories (computing late-cycle means and degradation slopes across each training engine's full life), but test-engine routing had to use only the last 30-cycle observation window. On FD004, which spans six operating conditions, the sensor statistics of a 30-cycle window vary substantially depending on which operating condition the engine encountered in its final cycles --- a variation unrelated to fault mode. This operating-condition-driven variability overwhelmed the fault-mode signal in the GMM features, causing the decision boundary --- learned on trajectory-level statistics --- to assign virtually all test engines to a single branch. Soft-gating (M2) recovered at RMSE = 18.82 ± 1.56, comparable to M0 (p = 0.44; $d$ = $-$0.06), confirming that soft weighting avoids the assignment instability of hard partitioning without providing statistically detectable improvement over the single-model baseline.
+
+M3 achieved RMSE = 17.30 ± 1.04 on FD004, not detectably different from M0 (p = 0.31; $d$ = $-$0.48). Because M3's GatingNet reads only the first 10 cycles of each engine — information that is equally available in training and test settings — it was immune to the test-time distribution collapse that undermined M1. On both FD003 and FD004, M2 and M3 successfully avoided the hard-routing failure but provided no statistically detectable improvement over the single-branch baseline. This result suggests that the early-cycle attention gate avoids a major reliability risk (catastrophic hard-routing degradation) without introducing the performance overhead of a dedicated fault-mode architecture for deployments where fault-mode structure is weak or early-cycle discriminability is low.
+
+\subsection{Loss Function Comparison (H4)}
+
+\textbf{A statistical constraint shapes how H4 results should be read.} With N = 5 seeds per condition and BH-FDR correction across 96 comparisons, H4 had limited power to detect anything other than very large and consistent effects. Post-hoc power computation indicates that the minimum detectable Cohen's $d$ is approximately 2.0 at this family size and seed count (see Section~V-E); the study was therefore powered only to detect effects substantially larger than the moderate effect sizes ($d \approx 0.5$--$1.0$) that practical loss-function improvements would typically be expected to produce. H4 results are exploratory: non-significant comparisons are interpreted as an absence of detectable improvement rather than confirmed equivalence, and patterns indicate directional signals only.
+
+\textbf{No statistically detectable improvement from any custom loss function was found.} Across all 96 pairwise comparisons (6 loss functions $\times$ 4 clipping values $\times$ 4 datasets), zero reached p$_\text{BH}$ $<$ 0.05; the minimum corrected p-value was 0.176.
+
+Some individual combinations showed nominally lower scores: L5 (TWA) at clip = 125 on FD001 achieved NASA Score = 3.40 $\pm$ 0.32 vs 5.66 $\pm$ 1.12 for MSE ($d$ = $-$1.54); L7 (HubA) reduced RMSE to 14.90 $\pm$ 0.33 vs 16.34 $\pm$ 0.40 but worsened NASA Score ($d$ = +2.00), because HubA's symmetric Huber penalty does not sufficiently penalise late predictions. Neither survived BH-FDR correction (p$_\text{BH}$ = 1.0). Positive $d$ denotes a worse NASA Score than MSE; negative $d$ denotes improvement. The null result diverged from single-dataset gains reported by Rengasamy et al.\ \cite{ref37,ref39} because cross-sub-dataset BH-FDR substantially raises the significance threshold. Clipping threshold findings are independent of backbone architecture; H1 used linear regression (OLS) specifically to isolate label-engineering effects from model capacity.
+
+The dominant driver of NASA Score variance across this study was RUL clipping, not loss function choice. Table VIII illustrates this: at clip = 125, all seven loss functions converged to within a factor of 1.5× of one another in NASA Score on FD001 (range: 3.40–6.14). Removing the clip inflated FD003 NASA Score to between 3,124 (L6, Pinball) and 9,613,539 (L1, MSE), a span of three orders of magnitude that dwarfs any inter-loss difference at a fixed clip value. Even the loss functions designed to suppress late predictions (L5 TWA, L6 Pinball, L7 HubA) reduced but did not eliminate the clip = None catastrophe on FD003: L6 Pinball achieved NASA = 3,124 vs L1 MSE's 9,614,000 — a 3,000× improvement within the clip-free condition, yet still 630× worse than the worst result at clip = 125. This finding implies that loss-function engineering is a second-order design choice: it cannot substitute for proper label engineering (RUL clipping) as a mechanism for controlling the tail behaviour of the NASA penalisation function. Practitioners should fix the clipping threshold before considering custom loss functions. Fig. 8 illustrates the clip-dominance effect across all seven loss functions and four clipping values.
+
+\begin{figure}[!t]
+\centering
+\includegraphics[width=\columnwidth]{Fig8}
+\caption{Mean NASA prognostic score (lower is better) across all four datasets as a function of RUL clipping threshold and loss function (560 LSTM training runs, 5 seeds per configuration). clip = None yields catastrophic scores (up to $2.4 \times 10^6$) regardless of loss function, while clip $\in \{125, 130\}$ stabilises results for all losses. Among clipped configurations, no custom loss achieves statistically significant improvement over MSE after BH-FDR correction ($\alpha = 0.05$).}
+\label{fig:8}
+\end{figure}
+
+
+\begin{table}[!t]
+\centering
+\footnotesize
+\caption{Loss function comparison (H4): RMSE and NASA prognostic score (mean$\pm$std, 5 seeds) at best clipping threshold per loss function across four CMAPSS sub-datasets.}
+\label{tab:vii}
+\resizebox{\linewidth}{!}{%
+\begin{tabular}{llcccccccccl}
+\toprule
+\multirow{2}{*}{\textbf{ID}} & \multirow{2}{*}{\textbf{Description}} & \multirow{2}{*}{\textbf{Clip}} & \multicolumn{2}{c}{\textbf{FD001}} & \multicolumn{2}{c}{\textbf{FD002}} & \multicolumn{2}{c}{\textbf{FD003}} & \multicolumn{2}{c}{\textbf{FD004}} & \multirow{2}{*}{\textbf{Sig.}} \\
+\cmidrule(lr){4-5}\cmidrule(lr){6-7}\cmidrule(lr){8-9}\cmidrule(lr){10-11}
+ & & & RMSE & NASA & RMSE & NASA & RMSE & NASA & RMSE & NASA & \\
+\midrule
+L1 (MSE)     & Standard mean squared error         & 130 & 16.70$\pm$0.41 & 5.28$\pm$0.60  & \textbf{28.18$\pm$0.43} & \textbf{48.34$\pm$12.31} & 15.97$\pm$0.45 & 5.52$\pm$0.66 & 31.25$\pm$0.52 & 42.18$\pm$5.04  & --- \\
+L2 (NASA)    & Direct NASA score minimization      & 130 & 15.46$\pm$0.34 & 4.26$\pm$0.70  & 29.92$\pm$0.58 & 73.82$\pm$22.18 & \textbf{15.49$\pm$0.55} & \textbf{3.85$\pm$0.73} & 31.49$\pm$0.64 & 43.53$\pm$8.17  & No \\
+L3 (DynMSE)  & Dynamically weighted MSE            & 125 & 14.74$\pm$0.36 & 3.61$\pm$0.27  & 29.86$\pm$0.48 & 56.86$\pm$9.93  & 15.65$\pm$0.80 & 4.00$\pm$0.60 & 30.12$\pm$0.87 & \textbf{35.91$\pm$3.16}  & No \\
+L4 (Focal)   & Focal loss                          & 130 & 17.04$\pm$0.66 & 6.40$\pm$0.81  & 28.40$\pm$0.51 & 49.59$\pm$6.99  & 16.45$\pm$0.68 & 6.44$\pm$1.20 & \textbf{30.00$\pm$0.65} & 36.36$\pm$4.81  & No \\
+L5 (TWA)     & Time-weighted asymmetric            & 125 & \textbf{14.72$\pm$0.32} & \textbf{3.40$\pm$0.32}  & 29.94$\pm$0.72 & 68.60$\pm$22.47 & 16.22$\pm$1.11 & 4.94$\pm$2.55 & 31.26$\pm$1.03 & 41.89$\pm$6.44  & No \\
+L6 (Pinball) & Pinball ($\tau$=0.35)               & 125 & 15.69$\pm$0.49 & 5.09$\pm$0.55  & 30.30$\pm$0.61 & 90.60$\pm$12.81 & 17.05$\pm$0.45 & 9.55$\pm$1.33 & 31.05$\pm$0.62 & 44.83$\pm$8.12  & No \\
+L7 (HubA)    & Huber-asymmetric ($\delta$=20)      & 125 & 14.90$\pm$0.41 & 3.88$\pm$0.42  & 29.75$\pm$0.58 & 54.95$\pm$9.33  & 16.11$\pm$0.70 & 4.96$\pm$1.48 & 30.57$\pm$0.73 & 41.16$\pm$4.52  & No \\
+\bottomrule
+\end{tabular}%
+}\\[3pt]
+\begin{minipage}{\linewidth}
+\footnotesize\textit{Bold = best (lowest) RMSE or NASA per dataset. No custom loss achieved statistically significant improvement over L1 MSE after BH-FDR correction ($\alpha$=0.05); minimum corrected p-value = 0.176. Results shown at each loss function's best clipping threshold.}
+\end{minipage}
+\end{table}
+
+
+\section{Discussion and Implications}
+
+\subsection{Which Design Choices Actually Move the Needle}
+
+Which design choices actually move the needle in turbofan RUL prediction? Across more than 800 training runs spanning four sub-datasets, seven normalization strategies, seven loss functions, and four architectural variants, a consistent pattern emerges: RUL clipping and sensor normalisation produced the largest and more consistent performance differences, while fault-mode routing and loss function behave differently. Specifically, clipping misconfiguration inflated FD003 NASA Score by up to 306,000-fold (H1); per-unit normalisation degraded RMSE by 3.8--5.0 cycles relative to fleet min-max on FD001 and FD002 under the primary H2 screening ($p_\text{BH} = 0.011$), confirmed at 2.1--8.4 cycles on FD001--FD003 under the unified protocol ($p_\text{BH} = 0.009$; Table~VI). Fault-mode routing represents a different type of factor: hard GMM routing significantly degraded performance on both multi-fault datasets (+156\%/+76\% RMSE, H3), but no soft or attention-based routing improved over the single-model baseline by a statistically detectable margin. Loss function showed no detectable effect after BH-FDR correction (H4). The practical distinction is therefore between upstream decisions (clipping, normalisation) that produce consistent fleet-wide effects, and downstream choices (routing, loss) that primarily represent reliability risks to avoid rather than performance levers to exploit. This upstream/downstream distinction has not previously been examined through a controlled cross-scenario evaluation and carries immediate implications for how practitioners and benchmark designers should allocate modelling effort \cite{ref05,ref06}. Because H2 (normalization) and H3 (architecture) were evaluated under different experimental configurations --- backbone capacity, feature set, and validation protocol differ between the two hypotheses (\S{}III-H, \S{}V-G) --- the factor comparison reflects aggregated within-hypothesis evidence rather than a single unified cross-factor ablation; practitioners applying these steps in sequence should validate the combined pipeline on their own data. H1's linear regression (OLS) baseline --- a deterministic model with no capacity to compensate for label ceiling removal --- demonstrates that label misconfiguration is a dataset-level reliability failure, not a backbone artefact; the 306,000-fold NASA Score inflation at clip = None generalises beyond the stacked-LSTM backbone used in H2--H4. The broader significance is methodological: single-dataset experiments, which constitute the majority of the CMAPSS literature \cite{ref09,ref14,ref15}, cannot isolate these effects because a confound that is large on one sub-dataset may be negligible on another and vice versa.
+
+\subsection{Why Fleet Normalization Beats Per-Unit Strategies}
+
+On CMAPSS, inter-engine sensor variation is small relative to degradation magnitude --- a property that consistently favours fleet-level statistics over engine-local references. Per-unit normalisation methods (N3–N6) subtract engine-specific initial-state baselines, an operation that removes genuine absolute degradation information when initial-condition variation across engines is small relative to fault progression magnitude. On a homogeneous synthetic fleet such as CMAPSS, a fleet-trained min-max scaler encodes a cross-engine map of the full degradation trajectory; engine-local normalisation replaces this shared map with a zero-mean engine-local reference, discarding the information about where an engine sits in the fleet distribution. The RevIN-style forward normalization \cite{ref23} failure compounds this problem: RevIN's per-window mean subtraction applies the local-baseline removal at every inference step, progressively erasing the degradation trend across each 30-cycle window. Instance-normalisation approaches --- including RevIN \cite{ref23} and instance-normalisation flows for non-stationary time series \cite{ref28} --- demonstrate strong gains on multi-step forecasting tasks where distribution shift across training and test windows is the dominant challenge; on CMAPSS, the dominant challenge is extracting a common degradation signature from a fleet — a context in which instance-level adaptation is counterproductive rather than beneficial. A recent theoretical critique of RevIN \cite{ref25,ref26} reached a compatible conclusion: RevIN's components are redundant when the primary normalisation challenge is not temporal distribution shift but conditional offset. The four-dataset results are consistent with this theoretical prediction in the prognostics setting. Whether a heuristic affine rescaling of the scalar RUL prediction --- applying the learnable parameters as $\hat{y}_{\text{rescaled}} = \gamma \cdot \hat{y}_{\text{norm}} + \beta$, as a global scaling without the theoretical motivation of restoring sensor units --- would empirically recover some performance remains a targeted ablation not conducted in this study and may merit evaluation in future work.
+
+The relative performance of fleet- and per-unit normalization is likely to depend on dataset characteristics. Practitioners working on real engine fleets where inter-engine manufacturing tolerance produces substantial initial-state variation — including variable rotor clearances, turbine blade wear, and sensor calibration offsets — may find per-unit strategies more competitive than the CMAPSS results suggest \cite{ref29}. On CMAPSS, the observed level of inter-engine variation favours fleet-level statistics; this ranking may differ on other fleets. Inter-engine variability relative to degradation range should therefore be considered when selecting a normalization level. Future work could quantify how the relative performance of the two approaches varies with inter-engine variability --- a direction requiring N-CMAPSS or real-fleet data with known manufacturing tolerances.
+
+The protocol-unified N1--N3 comparison (Section~IV-C) provides additional boundary conditions for this recommendation. The fleet advantage was confirmed across both experimental configurations on FD001 and FD002, supporting a robust recommendation for fleet min-max on single-condition or lightly heterogeneous datasets. On FD004, however, the original statistically significant advantage (RMSE 14.60 vs.\ 18.02; d = 4.28) disappeared when op columns were removed after residualization (17.92 vs.\ 18.51; p$_\text{BH}$ = 0.46), indicating that the normalization ranking on multi-condition datasets is sensitive to whether explicit operating-condition labels are retained as direct model inputs. Practitioners applying fleet normalization to multi-condition fleets should therefore verify whether the feature set includes explicit condition identifiers, as this choice can interact with the normalization level.
+
+\subsection{FD003 Inter-Seed Variance: Protocol Interaction and Fault-Structure Contributions}
+
+The N1/FD003 standard deviation of 12.86 cycles is not a modelling failure in the conventional sense; however, the protocol-unified analysis (Section~IV-C) demonstrates that this anomaly did not persist when backbone capacity was matched (LSTM2 hidden = 64) and validation splits were drawn per seed: M0/FD003 std collapsed to 0.67 under the unified protocol. The elevated variance therefore reflects an interaction among backbone capacity, validation split method, and checkpoint-selection dynamics under the H2 protocol, rather than an inherent property of fleet normalisation or fault-mode heterogeneity in isolation.
+
+Fault-mode structure may contribute to the protocol sensitivity without being its direct cause. A compact backbone (LSTM2 hidden = 32) with a fixed validation split provides fewer regularisation degrees of freedom and may be more susceptible to training-distribution imbalance between the two CMAPSS fault modes; a given seed's validation set composition would then determine which fault mode the model primarily learns, producing bimodal per-seed RMSE outcomes. The absence of analogous high variance on FD004 under H2 is consistent with this view: FD004 shares the same multi-fault structure but has 249 training engines (versus FD003's 100), providing a more stable training distribution that dampens seed-to-seed composition effects. The direct causal role of fault-mode heterogeneity was not isolated in these experiments and the protocol interaction remains the primary identified mechanism.
+
+No dataset-normaliser combination outside FD003 exceeded std = 1.84 under H2, and M3 std = 1.69 on FD003 under the unified protocol --- both within normal operating range. FD003's GatingNet confidence (mean $\max(w_0, w_1)$ = 0.727 $\pm$ 0.165) indicated moderately decisive routing, consistent with the Silhouette score of 0.761 confirming fault-mode separability. More generally, unusually high inter-run variance may motivate examination of both latent data heterogeneity and protocol configuration (backbone capacity, split method, evaluation clipping) before attributing the instability to data structure alone.
+
+\subsection{What the Architecture Comparison Reveals About Fault-Mode Routing}
+
+\textbf{In FD003, information associated with the latent fault modes is detectable from early-cycle observations.} M3's GatingNet read only K = 10 cycles and consistently routed engines to the appropriate latent expert branch, achieving RMSE = 13.24 ± 1.69 on FD003 without any fault-mode supervision. A K sensitivity analysis ($K \in \{5, 10, 15, 20, 30\}$) showed that M3 RMSE was largely insensitive to K, and that K=5 already achieved RMSE = 14.23 ± 0.34. This result is notable because fault signatures might otherwise be expected to become more distinguishable as degradation progresses. The GatingNet's early-cycle — and as few as five-cycle — success implies that the two CMAPSS fault modes differ primarily in baseline sensor state rather than in degradation rate: the initial operating point of s15 (bypass pressure ratio, |Δz| = 31.3) and s12 (fuel-to-pressure ratio) sets fault-mode membership at or before commissioning, consistent with the EDA finding that inter-cluster differences are driven by absolute level rather than slope. Inter-seed variance decreased with K (std: 0.34 at K=5, 0.27 at K=30), suggesting that longer context improves routing stability but not mean accuracy; K=5--10 was sufficient within the present CMAPSS experiments.
+
+For CMAPSS-like data, the results suggest that routing may be possible using early-cycle observations rather than accumulated degradation history. This is qualitatively distinct from approaches that use accumulated degradation history for routing \cite{ref30,ref31,ref33}, which require a burn-in period before the router is reliable. M3 also avoids the test-time distribution problem that defeats M1 (247:1 cluster collapse on FD004): because the first K = 10 cycles are always available at deployment time, GatingNet inputs are identically distributed between training and deployment, eliminating a source of silent performance degradation that post-hoc GMM routing cannot escape. Gate confidence (mean $\max(w_0, w_1)$ over training engines) can be examined before deployment as a diagnostic for routing decisiveness. FD003 gate confidence was 0.727 ± 0.165 and FD004 gate confidence was 0.676 ± 0.055 --- both above 0.5 (random routing), indicating that the GatingNet found a useful early-cycle discriminant on both datasets. A confidence value near 0.5 after convergence would indicate that M3 has not found a reliable early-cycle discriminant and M0 may be more appropriate. This pre-deployment check converts the routing decision from a black-box design choice into a traceable, measurable reliability property.
+
+From an architecture standpoint, M3 is an instance of mixture-of-experts (MoE) inference \cite{ref32,ref43,ref44} with an early-cycle context encoder as the gating network and no label supervision for the gate. Unlike RUL-QMoE \cite{ref43}, which targets probabilistic interval prediction for battery degradation using supervised material labels, and PSMMoEs \cite{ref44}, which applies metric-learning gating for cross-domain fault classification, M3 performs deterministic point-prediction RUL routing in a single unlabelled turbofan dataset. Compared with CAELSTM \cite{ref15} --- the most recent supervised competitor achieving RMSE = 13.40 on FD003 --- M3 achieved comparable accuracy (RMSE = 13.24 ± 1.69) without fault-mode supervision or convolutional autoencoder pre-training. Whether any remaining gap is attributable to backbone capacity differences is a question for future evaluation on more powerful architectures. M3's practical advantage lies in its architectural efficiency: the GatingNet contributes only 4.9K parameters — less than 5\% overhead above the two-branch baseline (Table II) — and requires no modification to the LSTM backbone. For practitioners operating existing LSTM-based prognostic pipelines, fault-mode-aware prediction is therefore achievable without backbone migration, at negligible additional computational cost. Because M3 uses an identical two-branch architecture on both FD003 and FD004, any capacity or ensemble benefit would appear equally on both sub-datasets; the absence of statistically detectable FD004 improvement therefore provides an implicit cross-dataset capacity control, attributing the FD003 gain to routing utility rather than model size. Whether the gating principle extends to attention-based encoders \cite{ref08,ref13,ref14} — where global attention may inherently capture early-cycle fault patterns through its query-key-value mechanism — is an open question addressed in Section H.
+
+The early-cycle routing premise warrants an important caveat regarding broader applicability. Alternative unsupervised approaches to fault mode separation — notably UMAP-based trajectory clustering \cite{ref46} and joint learning frameworks that operate over the full degradation history \cite{ref47} — implicitly assume that fault mode identity becomes unambiguous only as degradation progresses, and they route or classify test units accordingly using all available observation context. This view is corroborated by causal-inference experiments on N-CMAPSS \cite{ref48}, which report that early anomalies are ``difficult to identify due to complex thermodynamic couplings and nonlinear degradation patterns'' in real-engine data; and by semi-supervised sensor selection work \cite{ref49} showing that accurate fault mode recognition benefits substantially from partial supervisory labels. Taken together, these studies suggest that pure unsupervised early-cycle separation may be a property specific to the CMAPSS simulation environment rather than a universal prognostic principle.
+
+M3's five-cycle discriminability on CMAPSS is traceable to a concrete data-generative property: the two fault modes differ primarily in absolute baseline sensor level (s15 bypass pressure ratio, $|\Delta z| = 31.3$) rather than in degradation rate or trajectory shape. In a real-engine fleet where fault modes manifest as progressive deviations from a shared healthy baseline --- rather than as distinct initial operating points --- the GatingNet faces a harder discrimination task, and the required early-cycle window K may be substantially larger or routing performance lower. Silhouette screening may provide one way to assess whether early-cycle separation is sufficiently distinct: if GMM clustering on K-cycle prefixes yields Silhouette $< 0.5$, early-cycle gating may be less appropriate and should be validated against full-trajectory routing strategies such as those in \cite{ref46,ref47} or a two-stage approach that begins routing only after a short burn-in window.
+
+Similar early-cycle routing may be worth investigating in other PHM applications where fault modes differ in their initial sensor states --- for instance, battery cells with different cathode compositions exhibiting divergent early-discharge voltage profiles, or induction motors with pre-existing stator-winding asymmetries detectable from start-up current signatures. The proposed screening measures could be evaluated as candidate pre-deployment indicators in such systems.
+
+\subsection{Why Loss Functions Cannot Substitute for Label Engineering}
+
+H4's null result is best read as a power constraint: with N = 5 seeds and a 96-test BH family, no comparison can achieve statistical significance regardless of effect size --- the finding is ``no large effect was detectable'' rather than confirmed equivalence. Post-hoc power computation indicates that the minimum detectable Cohen's $d$ at this family size and sample count is approximately 2.0 --- the study is powered only to detect very large effects, not the moderate effects ($d \approx 0.5$--$1.0$) that practical loss-function improvements would typically be expected to produce. Despite this limitation, the observed effect sizes provide exploratory information: once RUL clipping is correctly applied at $\tau = 125$, the MSE gradient already penalises late predictions disproportionately, because the clipped label distribution is right-skewed and CMAPSS test engines are predominantly in the low-RUL regime at the end of their trajectories. Asymmetric losses may therefore provide only an additional adjustment once clipping is applied. One possible interpretation is that clipping already introduces asymmetry into the target distribution, reducing the additional benefit of an explicitly asymmetric loss. These results raise the possibility that the apparent benefit of asymmetric losses in single-dataset studies \cite{ref37,ref38,ref39} depends partly on the clipping strategy used in the baseline. Across the tested clip--loss combinations, clipping produced larger performance changes than loss-function selection, consistently across all four sub-datasets --- a cross-term that has not been previously reported in the CMAPSS literature.
+
+One exception deserves mention. Under clip = None, L6 (Pinball, $\tau = 0.25$) reduced FD003 NASA Score from 9,614,000 to 3,124 — a 3,000-fold improvement relative to MSE within the clip-free condition, reflecting Pinball's quantile-regression property of producing conservative (early) predictions \cite{ref40}. However, even this gain leaves FD003 630× worse than the worst result at clip = 125, confirming that no loss function can compensate for missing label engineering. Chung et al.'s \cite{ref41} theoretical critique of blind Pinball minimisation reinforces this conclusion: calibrated quantile coverage requires the label distribution to be well-conditioned, which is not the case for an uncapped RUL target that can exceed 500 cycles.
+
+\subsection{A Risk-Oriented Interpretation of PHM Pipeline Design Choices}
+
+The four hypotheses collectively indicate that upstream design decisions --- RUL label clipping and sensor normalisation --- produced larger and more consistent performance differences than downstream choices --- fault-mode routing and loss function --- across the present CMAPSS experiments. This section translates that finding into a practical design checklist. Each step is calibrated to CMAPSS and should be validated on fleet-specific data before operational commitment.
+{\small\begin{verbatim}
+STEP 1 -- Verify RUL Label Ceiling
+  Confirm clip = 125 cycles (tau) is appropriate for the target fleet.
+  --------------------------------------------------------
+  Domain evidence that fleet average lifetime differs substantially
+  from 206-247 cycles (the CMAPSS range)?
+    YES -> consider adaptive clip = 70th-percentile fleet lifetime
+    NO  -> use tau = 125 (confirmed optimal across all CMAPSS sub-datasets)
+
+STEP 2 -- Compare Fleet vs Per-Unit Normalization
+  Fit fleet min-max (N1) and per-unit min-max (N3) on training data.
+  Evaluate on a held-out engine-level validation split.
+  --------------------------------------------------------
+  Fleet normalization significantly better on validation split?
+    YES -> use fleet min-max (N1)
+    NO  -> assess whether inter-engine manufacturing variability
+           exceeds within-engine degradation variance; if so,
+           per-unit normalization may be more competitive
+
+STEP 3 -- Assess Multi-Fault Risk Before Choosing Architecture
+  Default architecture: single-branch baseline (M0).
+  Fit GMM (k=2) on early-cycle sensor slopes; compute Silhouette S.
+  --------------------------------------------------------
+  S >= 0.5? (latent fault structure may be present)
+    YES -> DO NOT USE hard GMM routing (M1): proved significantly
+           harmful on both multi-fault CMAPSS sub-datasets
+           (+156% RMSE on FD003; +76% on FD004)
+        -> Adopt M3-style early-cycle GatingNet ONLY IF a held-out
+           validation set shows incremental RMSE benefit over M0.
+           Gate confidence (mean max(w0,w1) > 0.5 after training?)
+           can serve as a routing-quality diagnostic.
+    NO  -> retain single-branch baseline (M0)
+
+STEP 4 -- Loss Function (lowest-priority factor)
+  Use MSE (L1) as default.
+  --------------------------------------------------------
+  No custom loss achieved statistically detectable improvement
+  over MSE after BH-FDR correction in the present study.
+  If deployment metric is NASA Score (asymmetric):
+    -> L7 (HubA, delta=20, lambda_a=3) or L5 (TWA, lambda_t=10)
+       showed directional improvement on FD001; validate with
+       >=10 seeds before adoption.
+    ONLY adopt if BH-FDR-corrected gains survive on all target datasets.
+\end{verbatim}
+}
+
+A label engineering error --- omitting or miscalibrating the RUL clipping threshold --- inflates the NASA prognostic score by up to six orders of magnitude, constituting the most severe performance degradation observed across all experiment conditions. Normalisation strategy produced large and consistent RMSE differences on FD001--FD003 (fleet vs per-unit: $\Delta$RMSE = 2.1--8.4 cycles; $p_\text{BH} = 0.009$). By contrast, no routing architecture (M0--M3) produced a statistically detectable RMSE improvement over the single-model baseline: M2 and M3 avoid the hard-routing collapse without improving over M0 (all $p > 0.3$). Loss-function selection showed no detectable effect after BH-FDR correction. The primary design value of M2 and M3 is therefore protection against the reliability risk introduced by hard GMM routing, not performance improvement over a well-configured baseline. This risk-protection perspective is conceptually analogous to severity-tier frameworks in reliability engineering (such as FMEA), though no formal methodological equivalence is claimed.
+
+Gate confidence (mean $\max(w_0, w_1)$) can be examined after GatingNet training as a diagnostic for routing decisiveness: FD003 yielded 0.727 $\pm$ 0.165 and FD004 yielded 0.676 $\pm$ 0.055, both above the random-gating baseline of 0.5. However, because ground-truth fault-mode labels are unavailable on CMAPSS, the relationship between confidence and routing accuracy cannot be established from these data alone; confidence should not be interpreted as a calibrated deployment threshold. If confidence remains near 0.5 after convergence, M3 has not found a reliable early-cycle discriminant and M0 should be preferred.
+
+For practitioners encountering $S \in [0.5, 0.65]$, this range may be considered inconclusive given the limited number of datasets evaluated. If fault-mode differences emerge only in late life (slope-driven rather than baseline-driven), the GatingNet may not reliably separate modes at $K = 10$ cycles; a larger $K$ or a two-stage routing strategy should be evaluated. A held-out validation comparing M3 against M0 is advisable before committing to fault-mode routing in this marginal range.
+
+\subsection{Limitations}
+
+\textbf{Several limitations constrain the generalisability of these findings.} First, and most critically, all experiments were conducted on the NASA CMAPSS simulation benchmark. Real turbofan engines exhibit sensor noise, calibration drift, maintenance-induced sensor resets, and operating-history effects that are absent from the synthetic CMAPSS environment. In particular, real fleets typically exhibit greater inter-engine manufacturing variability than CMAPSS, which may alter the fleet-vs-per-unit normalization ranking established in H2. The recently introduced N-CMAPSS dataset \cite{ref16} addresses some of these gaps by including realistic degradation trajectories, variable flight conditions, and turbofan-specific sensor physics; whether the design priorities identified here transfer to N-CMAPSS — and to real operational sensor streams — is the primary open question from this study and the most important direction for validation prior to industrial deployment.
+
+Practitioners intending to deploy these design guidelines should follow a staged validation roadmap before committing to production: (1) replicate the ablation on N-CMAPSS to verify that the clipping and normalisation rankings survive realistic sensor noise and variable flight profiles; (2) validate GMM cluster assignments against post-teardown fault records on at least one fleet sample to confirm that unsupervised routing corresponds to physically distinct failure modes rather than a statistical partition; and (3) measure inter-engine sensor coefficient of variation on the target fleet --- if substantially higher than the CMAPSS baseline ($\sim$5\%), per-unit normalisation strategies should be re-evaluated before committing to fleet min-max.
+
+Second, all hypotheses except H1 used a common two-layer stacked LSTM backbone; architectural choices and design-factor rankings may interact differently with Transformer-based or graph-neural-network encoders \cite{ref08,ref11,ref13,ref14}, which have shown competitive performance on CMAPSS in recent work.
+
+Third, H3 relied on unsupervised cluster quality (Silhouette $\geq 0.5$) as a proxy for genuine physical fault categories, because CMAPSS provides no fault-mode labels. Whether M3's routing corresponds to HPC vs. fan degradation in a physically meaningful sense, or merely to a statistical partition, cannot be verified from the benchmark data alone.
+
+Fourth, the H1 clipping analysis employed LinearRegression (OLS, no regularisation) for computational tractability, while H2 and H4 used the LSTM backbone; direct cross-hypothesis RMSE comparisons therefore confound model complexity with the design factor under study, and the absolute RMSE values in Table IV should not be compared with those in Tables V–VIII.
+
+Fifth, within-study comparisons between H2 and H3 were constrained by implementation differences not unified prior to analysis: H2 used a compact backbone (LSTM$_2$ hidden=32, FC 32→16→1) and 17--23 input features (sensors plus op1/op2/op3; dataset-dependent — see Table~III), while H3/H4 used a full-capacity backbone (LSTM$_2$ hidden=64, FC 64→32→1) and 15 features (sensors only). H2 used a deterministic validation split (last 20\% of engines by unit ID) while H3 used a deterministic split (engine shuffle, seed = 42). H2 clipped test predictions to [0,~125] at evaluation; H3 did not. These differences mean that the H2 FD003 baseline RMSE (19.05 ± 12.86) and H3 M0 baseline RMSE (12.97 ± 0.67) reflect genuinely different experimental conditions; cross-hypothesis absolute RMSE comparisons should not be taken at face value.
+
+Sixth, the current implementation assumes a static batch-trained model deployed without further adaptation. In practice, sensor characteristics and fleet composition evolve over time; online learning mechanisms — such as periodic fine-tuning triggered by newly labeled flight cycles — would be required to maintain routing accuracy over extended operational periods. M3's lightweight GatingNet is architecturally compatible with such periodic updates, and this extension is reserved for future work.
+
+Seventh, M3's early-cycle routing relies on fault modes being distinguishable from initial baseline sensor state rather than from accumulated degradation patterns. Approaches that leverage full degradation trajectories for fault mode identification \cite{ref46,ref47} — including UMAP-based clustering over complete run-to-failure histories and joint learning frameworks that process the entire temporal sequence — suggest that the early-cycle discriminability observed on CMAPSS may not generalise to real-engine environments where initial sensor readings are contaminated by noise, calibration offsets, or operational variability. Causal-inference experiments on N-CMAPSS \cite{ref48} explicitly characterise early anomaly detection as difficult in realistic flight conditions, and semi-supervised frameworks \cite{ref49} report that partial fault-mode labels substantially improve mode recognition accuracy beyond what unsupervised early-cycle signals alone can provide. Practitioners should therefore verify early-cycle cluster discriminability (e.g., Silhouette $\geq 0.5$ on K-cycle prefixes) before adopting K-cycle gating in new deployment contexts, and should consider full-trajectory routing alternatives when this threshold is not met.
+
+\subsection{Industrial and Deployment Implications}
+
+The design priority ordering — label engineering, normalization, then fault-mode routing and loss function — may provide a useful structure for reliability risk management in turbofan PHM deployment. Neglecting label engineering (clip = None) inflates the NASA prognostic score by up to 306,000-fold on FD003 — equivalent in practice to a prognostics system that chronically over-predicts remaining life and delays maintenance intervention, the highest-cost failure mode in turbofan fleet operations where an undetected in-flight shutdown typically costs orders of magnitude more than a precautionary shop visit. This finding highlights the importance of RUL clipping calibration as a design decision that should precede architectural or loss-function work.
+
+M3's early-cycle gating avoids the train--test feature mismatch that affected post-hoc trajectory clustering (M1). Because the GatingNet reads only the first ten flight cycles, fault-mode routing may be performable at or near engine commissioning --- before any degradation has accumulated --- with no burn-in observation window required. Routing reliability can be examined before fleet exposure: gate confidence ($\max(w_0, w_1)$ mean over training engines) can be examined before deployment as an indicator of routing decisiveness. In the present experiments, FD003 gate confidence was 0.727 ± 0.165 and FD004 gate confidence was 0.676 ± 0.055, both above the 0.5 threshold for meaningful early-cycle discrimination. This indicator may be especially useful for fleet operators who must configure maintenance pipelines before degradation history is available.
+
+GMM hard-routing (M1) increased FD003 RMSE by +156\% (from 12.97 to 33.25 cycles) and FD004 RMSE by +76\% (from 18.96 to 33.28 cycles), quantifying the reliability risk of incorrect fault-mode partitioning in terms directly relevant to maintenance scheduling uncertainty. On computational scale, K-means residualization and GMM fitting scale linearly with engine count; Mini-Batch K-means variants are expected to substantially reduce fitting time for fleets of thousands of engines, though empirical runtime profiling at operational scale has not been conducted and remains a direction for validation.
+
+The H4 results suggest that extensive loss-function tuning may be a lower experimental priority than label and architecture choices, although the comparison is power-limited by the within-hypothesis design. Engineering effort is more productively directed to clipping calibration or multi-fault screening before extensive loss-function search. The three-stage ordering thus provides a structured starting point: verify labelling first, address fault-mode structure second, and treat loss selection as a later-stage refinement subject to cross-dataset validation.
+
+\subsection{Future Research Directions}
+% Three directions emerge directly from the limitations and null results of this study.
+
+\textbf{Adaptive RUL clipping.} Our results confirm that a single threshold is not universally optimal: clip = 130 is marginally better on FD002/FD004 (ΔRMSE = −0.57, non-significant) while clip = 125 is unambiguously best on FD001/FD003, and the dataset-specific lifetime distributions differ (FD001/FD002 mean $\approx 206$ cycles; FD003/FD004 mean $\approx 247$ cycles). A data-driven adaptive threshold — for instance, set at the 70th-percentile engine lifetime in the training fleet — would be principled, require no manual tuning, and directly address the H1 research gap identified in the literature \cite{ref18,ref20}. An adaptive scheme would also handle the clip = None catastrophe on FD003 automatically, since the 70th-percentile of FD003 lifetimes is approximately 137 cycles, close to the empirically validated 125.
+
+\textbf{M3 on real-data and N-CMAPSS benchmarks.} Validating the early-cycle GatingNet on N-CMAPSS (2021), which includes sensor noise, maintenance resets, and variable flight-envelope profiles, would test whether the fault-mode routing principle transfers beyond the CMAPSS simulation environment. N-CMAPSS also provides turbofan health parameter labels (HPT/Fan degradation) that would allow the cluster-quality proxy to be replaced by supervised routing accuracy, enabling a direct comparison between M3's unsupervised gating and a fully supervised fault-mode classifier. A parallel question is whether M3's explicit GatingNet remains necessary when the backbone itself is replaced with an attention-based encoder \cite{ref08,ref11,ref13,ref14}; global attention mechanisms may inherently perform early-cycle fault separation, in which case the design checklist's fault-mode routing step would require reformulation for Transformer-class models. Comparing M3's unsupervised gating against a supervised fault-mode classifier --- given ground-truth HPT/Fan health labels available in N-CMAPSS --- would quantify the reliability cost of label-free routing: the RMSE gap between M3 (RMSE = 13.24 on FD003) and the supervised upper bound constitutes the measurable cost of unsupervised deployment. Separately, the internal design choices of the GatingNet --- hidden units (currently 32), auxiliary loss weights (0.05), and Softmax normalisation --- were not ablated within this study; a targeted sensitivity analysis of these parameters is a natural extension before adapting M3 to new deployment contexts. An orthogonal design option not evaluated in this study is using GMM posterior probabilities directly as auxiliary input features --- appended to the sensor window --- rather than as routing weights; comparing this feature-augmentation approach against M2 and M3 would quantify whether soft routing and feature-based fault-mode representations yield different inductive biases for RUL prediction.
+
+\textbf{Deep learning backbone exploration and ensemble strategies for real operational data.} The design priorities identified in this study were validated on a stacked LSTM backbone applied to a controlled simulation benchmark. As industrial PHM systems move towards deployment on real sensor streams, empirical exploration of diverse backbone architectures — including Transformer encoders \cite{ref08,ref11,ref13,ref14}, temporal convolutional networks, and graph neural networks — is necessary to establish whether the design hierarchy and the architectural ranking generalise across model families. Real operational data from heterogeneous fleets introduces irregular degradation patterns, sensor calibration drift, and distributional shifts that may interact differently with each architecture; no single backbone can be assumed optimal without validation on representative operational data. Beyond single-model approaches, ensemble and blending strategies that combine predictions across multiple architecture families are likely to be required for robust coverage across diverse fault types, operating regimes, and fleet compositions encountered in practice. The design checklist provides a structured starting point — establishing label engineering and normalization as the highest-priority steps, and fault-mode screening as a reliability risk assessment — but the specific architectural choice should be treated as an open variable to be resolved empirically on held-out validation data for each new deployment context.
+
+\textbf{Scalable mixture-of-experts with unknown k.} M3 currently assumes exactly k = 2 fault modes, a strong prior that may not hold for heterogeneous industrial fleets. Extending the gating mechanism to an unknown and unbounded number of fault modes via Bayesian nonparametric priors — for example, a Dirichlet process mixture model on early-cycle sensor trajectories \cite{ref34} — would eliminate the cluster-count hyperparameter and adapt gracefully to fleets with diverse fault histories. Recent work on Bayesian nonparametric process mixtures for unlabelled failure modes \cite{ref34} provides a natural prior framework for this extension.
+
+\textbf{Loss × clipping interaction study.} The 4 × 7 cross-tabulation presented here reveals that clipping dominates, but the sample size per cell (5 seeds × 4 datasets) is insufficient to detect small interaction effects. A targeted study that varies clipping continuously (e.g., $\tau \in \{90, 100, 110, 120, 125, 130, 140\}$ cycles) and pairs each level with theoretically motivated losses could isolate whether any custom loss provides a statistically detectable benefit after optimal clipping is identified for each sub-dataset. This design would directly resolve the confound identified by comparing the null result of this study with the single-dataset gains reported by Rengasamy et al. \cite{ref37} and Abdullah \cite{ref22}. As a lower-cost intermediate step, a targeted 15--20 seed re-run on FD001 alone would resolve whether asymmetric losses produce a detectable single-dataset effect that disappears under cross-sub-dataset BH-FDR correction, providing direct evidence for or against the asymmetric loss hypothesis on the most-studied sub-dataset.
+
+\section{Conclusion}
+
+Four PHM pipeline design factors — RUL label clipping, sensor normalisation, fault-mode architecture, and loss function — were evaluated in isolation across all four NASA CMAPSS sub-datasets (FD001–FD004), with all comparisons Benjamini-Hochberg FDR-corrected. H1 confirmed that clip = 125 cycles — the established standard \cite{ref05,ref06} — produces the lowest or statistically tied-lowest RMSE on all four sub-datasets; removing the RUL ceiling inflates FD003 NASA Score by 306,000-fold, establishing label engineering as a resolved prerequisite throughout the remaining analyses.
+
+Fleet-level min-max normalisation significantly outperformed all per-unit and RevIN strategies on FD001, FD002, and FD004 under the primary seven-strategy screening protocol; a protocol-unified N1--N3 confirmatory analysis found the fleet advantage cross-protocol robust on FD001 and FD002 but protocol-sensitive on FD004 (no detectable difference when op columns were removed after residualization). On FD003, the anomalously high inter-seed variance observed under fleet normalisation (std = 12.86) resolved to std = 0.67 under a backbone-matched controlled protocol, indicating a training-protocol interaction (backbone capacity and validation-split configuration) rather than a normalisation deficiency or an inherent property of the multi-fault data structure. A controlled comparison of four fault-mode architectures revealed that GMM-based hard partitioning (M1) significantly degraded RMSE on both multi-fault datasets (FD003: +156\%; FD004: +76\%) --- the same multi-fault challenge that Ellefsen et al.~\cite{ref07} identified as driving performance differentials on CMAPSS --- while soft (M2) and end-to-end attention (M3) routing avoided this degradation without providing statistically detectable improvement over the single-model baseline. Gate confidence (mean $\max(w_0, w_1)$) is proposed as a post-training indicator of routing decisiveness, with FD003 (0.727) showing higher decisiveness than FD004 (0.676), consistent with the stronger fault-mode separability on that dataset.
+
+No statistically detectable improvement from custom loss functions was found after Benjamini-Hochberg correction across 96 pairwise comparisons (6 losses × 4 clips × 4 datasets). It should be noted that with N = 5 seeds and 96 BH-corrected comparisons, H4 was powered only to detect very large effects (minimum detectable Cohen's $d \approx 2.0$); the null result should be interpreted as "no large effect was detectable" rather than confirmed equivalence. The dominant source of variance in all prognostic metrics was RUL clipping rather than loss design. Together, the four hypotheses indicate that upstream decisions (RUL clipping, sensor normalisation) produced larger and more consistent performance differences than downstream choices (fault-mode routing, loss function) across the present CMAPSS experiments. Specifically, clipping and normalisation showed large, statistically significant effects; hard GMM routing significantly degraded performance while soft/attention routing recovered to baseline without improvement; and no loss function surpassed MSE after BH-FDR correction. This upstream/downstream attribution may guide where PHM research and engineering effort is most productively directed.
+
+Collectively, three findings carry direct implications for PHM practice. First, label engineering is a safety-relevant design decision: miscalibrated RUL clipping produced the most severe performance degradation observed across all experiment conditions, dominating all other design choices, and must be resolved before architectural or loss-function work begins. Second, GMM hard-routing is a reliability risk on multi-fault datasets; soft and early-cycle attention routing avoid catastrophic failure at negligible computational overhead, and gate confidence (mean $\max(w_0, w_1)$) can be examined before deployment as a diagnostic for routing decisiveness. Third, custom loss functions offer no statistically recoverable benefit once clipping is correctly applied, suggesting that engineering effort is better redirected to the higher-priority tiers. The controlled structure of this ablation also provides an attribution framework for interpreting gains reported by state-of-the-art bundled systems \cite{ref14,ref29,ref42}: the evidence indicates that correct label engineering and fault-mode routing account for the majority of systematic performance variation on CMAPSS, while architectural depth and loss-function choice are secondary factors that become distinguishable only after higher-priority tiers are resolved. Taken together, the design checklist — verify label engineering, evaluate normalisation strategy, assess multi-fault routing risk, then consider loss function — offers evidence-based design priorities for PHM system configuration derived from the present CMAPSS ablation.
+
+\section*{Funding}
+
+This work was supported by the National IT Industry Promotion Agency (NIPA) grant funded by the Ministry of Science and ICT (No. XXXX, Development of an Integrated Full-Lifecycle Operation Platform Technology for Ensuring Manufacturing Data Reliability).
+
+\section{Data and Code Availability}
+
+The NASA CMAPSS dataset used in this study is publicly available at the NASA Prognostics Center of Excellence Data Repository (\url{https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/}). No data were generated or modified; the benchmark is used as-is under its public access terms. The experimental code, including all preprocessing pipelines, model implementations (M0–M3), and statistical testing routines, will be made publicly available on GitHub upon acceptance of this manuscript.
+
+% References — generated from manuscript reference list
+% Replace \begin{thebibliography} with \bibliography{references}
+% if you use BibTeX (references.bib provided separately).
+\begin{thebibliography}{99}
+\bibitem{ref01}
+  A. Saxena, K. Goebel, D. Simon, and N. Eklund, "Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation," in \textit{Proc. 1st Int. Conf. Prognostics and Health Management (PHM)}, Denver, CO, 2008.
+\bibitem{ref02}
+  F. O. Heimes, "Recurrent Neural Networks for Remaining Useful Life Estimation," in \textit{Proc. 1st Int. Conf. Prognostics and Health Management (PHM)}, IEEE, 2008, doi: 10.1109/PHM.2008.4711422.
+\bibitem{ref03}
+  E. Ramasso and A. Saxena, "Performance Benchmarking and Analysis of Prognostic Methods for CMAPSS Datasets," \textit{Int. J. Prognostics Health Manage.}, vol. 5, no. 2, 2014, doi: 10.36001/ijphm.2014.v5i2.2236.
+\bibitem{ref05}
+  S. Zheng, K. Ristovski, A. Farahat, and C. Gupta, "Long Short-Term Memory Network for Remaining Useful Life Estimation," in \textit{2017 IEEE Int. Conf. Prognostics and Health Management (ICPHM)}, pp. 88–95, doi: 10.1109/ICPHM.2017.7998311.
+\bibitem{ref06}
+  X. Li, Q. Ding, and J.-Q. Sun, "Remaining Useful Life Estimation in Prognostics Using Deep Convolution Neural Networks," \textit{Rel. Eng. Syst. Safety}, vol. 172, pp. 1–11, 2018, doi: 10.1016/j.ress.2017.11.021.
+\bibitem{ref07}
+  A. L. Ellefsen et al., "Remaining Useful Life Predictions for Turbofan Engine Degradation Using Semi-Supervised Deep Architecture," \textit{Rel. Eng. Syst. Safety}, vol. 183, pp. 240–251, 2019, doi: 10.1016/j.ress.2019.01.016.
+\bibitem{ref08}
+  Y. Mo et al., "Remaining Useful Life Estimation via Transformer Encoder Enhanced by a Gated Convolutional Unit," \textit{J. Intell. Manuf.}, vol. 35, pp. 1997–2012, 2021, doi: 10.1007/s10845-021-01750-x.
+\bibitem{ref09}
+  R. Jin et al., "Bi-LSTM-Based Two-Stream Network for Machine Remaining Useful Life Prediction," \textit{IEEE Trans. Instrum. Meas.}, vol. 71, 2022, doi: 10.1109/TIM.2022.3163761.
+\bibitem{ref10}
+  D. Xu et al., "Spatio-Temporal Degradation Modeling and Remaining Useful Life Prediction Under Multiple Operating Conditions Based on Attention Mechanism and Deep Learning," \textit{Rel. Eng. Syst. Safety}, vol. 225, 2022, doi: 10.1016/j.ress.2022.108648.
+\bibitem{ref11}
+  Y. Zhang et al., "Trend-Augmented and Temporal-Featured Transformer Network with Multi-Sensor Signals for Remaining Useful Life Prediction," \textit{Rel. Eng. Syst. Safety}, vol. 235, 2023, doi: 10.1016/j.ress.2023.109258.
+\bibitem{ref13}
+  H. Wang et al., "Comprehensive Dynamic Structure Graph Neural Network for Aero-Engine Remaining Useful Life Prediction," \textit{IEEE Trans. Instrum. Meas.}, vol. 72, 2023, doi: 10.1109/TIM.2023.3312337.
+\bibitem{ref14}
+  K. You et al., "A 3-D Attention-Enhanced Hybrid Neural Network for Turbofan Engine Remaining Life Prediction Using CNN and BiLSTM Models," \textit{IEEE Sensors J.}, vol. 24, no. 3, 2024, doi: 10.1109/JSEN.2023.3335994.
+\bibitem{ref15}
+  S. M. Elsherif, B. Hafiz, M. A. Makhlouf, and O. Farouk, "A Deep Learning-Based Prognostic Approach for Predicting Turbofan Engine Degradation and Remaining Useful Life," \textit{Sci. Rep.}, 2025, doi: 10.1038/s41598-025-09155-z.
+\bibitem{ref16}
+  F. Wu et al., "Remaining Useful Life Prediction Based on Deep Learning: A Survey," \textit{Sensors}, vol. 24, no. 11, art. 3454, 2024, doi: 10.3390/s24113454.
+\bibitem{ref17}
+  H. Li et al., "A Review on Physics-Informed Data-Driven Remaining Useful Life Prediction: Challenges and Opportunities," \textit{Mech. Syst. Signal Process.}, vol. 209, 2024, doi: 10.1016/j.ymssp.2024.111120.
+\bibitem{ref18}
+  F. Imbert, T. Adewumi, and H. Han, "A Novel Preprocessing-Driven Approach to Remaining Useful Life (RUL) Prediction Using Temporal Convolutional Networks (TCN)," in \textit{IEEE 37th Int. Conf. Tools Artif. Intell. (ICTAI 2025)}, 2026, doi: 10.1109/ICTAI66417.2025.00160.
+\bibitem{ref19}
+  K. Ensarioğlu, T. İnkaya, and E. Emel, "Remaining Useful Life Estimation of Turbofan Engines with Deep Learning Using Change-Point Detection Based Labeling and Feature Engineering," \textit{Appl. Sci.}, vol. 13, no. 21, art. 11893, 2023, doi: 10.3390/app132111893.
+\bibitem{ref20}
+  A. Srinivasan, J. C. Andresen, and A. Holst, "Ensemble Neural Networks for Remaining Useful Life (RUL) Prediction," \textit{Asia Pacific Conf. PHM Society}, vol. 4, no. 1, 2023, doi: 10.36001/phmap.2023.v4i1.3611.
+\bibitem{ref22}
+  M. E. B. Abdullah, "Asymmetric-Loss-Guided Hybrid CNN-BiLSTM-Attention Model for Industrial RUL Prediction with Interpretable Failure Heatmaps," arXiv preprint arXiv:2604.13459, April 2026.
+\bibitem{ref23}
+  T. Kim, J. Kim, Y. Tae, C. Park, J.-H. Choi, and J. Choo, "Reversible Instance Normalization for Accurate Time-Series Forecasting against Distribution Shift," in \textit{Int. Conf. Learning Representations (ICLR)}, 2022.
+\bibitem{ref24}
+  Z. Zhang et al., "A Framework for Predicting the Remaining Useful Life of Machinery Working under Time-Varying Operational Conditions," \textit{Appl. Soft Comput.}, 2022.
+\bibitem{ref25}
+  G. Berthelier et al., "On the Role of Reversible Instance Normalization," arXiv preprint arXiv:2603.11869, 2026.
+\bibitem{ref26}
+  Anonymous, "Noise or Signal? Deconstructing Contradictions and An Adaptive Remedy for Reversible Normalization in Time Series Forecasting," arXiv preprint arXiv:2510.04667, October 2025.
+\bibitem{ref28}
+  Z. Sun et al., "IN-Flow: Instance Normalization Flow for Non-Stationary Time Series Forecasting," in \textit{Proc. 31st ACM SIGKDD Conf. Knowledge Discovery and Data Mining}, 2025, doi: 10.1145/3690624.3709260.
+\bibitem{ref29}
+  S. Deng et al., "Prediction of Remaining Useful Life of Aero-Engines Based on CNN-LSTM-Attention," \textit{Int. J. Comput. Intell. Syst.}, 2024, doi: 10.1007/s44196-024-00639-w.
+\bibitem{ref30}
+  D. Xu, J. Shang, C. Jiang, X. Shang, H. Qiu, and L. Gao, "A Novel Multi-Task Learning Framework with Fault Mode Feature Separation for Remaining Useful Life Estimation of Mechanical Systems," \textit{Adv. Eng. Informatics}, vol. 64, art. 103053, 2025, doi: 10.1016/j.aei.2024.103053.
+\bibitem{ref31}
+  T. Lodygowski and S. Szrama, "Unsupervised Classification and Remaining Useful Life Prediction for Turbofan Engines Using Autoencoders and Gaussian Mixture Models: A Comprehensive Framework for Predictive Maintenance," \textit{Appl. Sci.}, vol. 15, no. 14, art. 7884, 2025, doi: 10.3390/app15147884.
+\bibitem{ref32}
+  Y. Liu, B. Xu, and Y.-a. Geng, "Multi-Condition Remaining Useful Life Prediction Based on Mixture of Encoders," \textit{Entropy}, vol. 27, no. 1, art. 79, 2025, doi: 10.3390/e27010079.
+\bibitem{ref33}
+  Z. Peng, Q. Wang, Z. Liu, and R. He, "Remaining Useful Life Prediction for Aircraft Engines under High-Pressure Compressor Degradation Faults Based on FC-AMSLSTM," \textit{Aerospace}, vol. 11, no. 4, art. 293, 2024, doi: 10.3390/aerospace11040293.
+\bibitem{ref34}
+  K. Fu, S. S. Disanayaka Mudiyanselage, C. Dai, and M. Kim, "Prognostics of Multisensor Systems with Unknown and Unlabeled Failure Modes via Bayesian Nonparametric Process Mixtures," arXiv preprint arXiv:2602.19263, February 2026.
+\bibitem{ref35}
+  J. Cohen, X. Huan, and J. Ni, "Fault Prognosis of Turbofan Engines: Eventual Failure Prediction and Remaining Useful Life Estimation," \textit{Int. J. Prognostics Health Manage. (IJPHM)}, 2023, doi: 10.36001/ijphm.2023.v14i2.3486.
+\bibitem{ref36}
+  H. \"{O}zcan, "Interpretable Ensemble Remaining Useful Life Prediction Enables Dynamic Maintenance Scheduling for Aircraft Engines," \textit{Sci. Rep.}, 2025, doi: 10.1038/s41598-025-23473-2.
+\bibitem{ref37}
+  D. Rengasamy, M. Jafari, B. Rothwell, X. Chen, and G. P. Figueredo, "Deep Learning with Dynamically Weighted Loss Function for Sensor-Based Prognostics and Health Management," \textit{Sensors}, vol. 20, no. 3, art. 723, 2020, doi: 10.3390/s20030723.
+\bibitem{ref38}
+  D. Rengasamy, H. Bhatt, B. Rothwell, X. Chen, and G. P. Figueredo, "Asymmetric Loss Functions for Deep Learning Early Predictions of Remaining Useful Life in Aerospace Gas Turbine Engines," in \textit{2020 Int. Joint Conf. Neural Networks (IJCNN)}, 2020.
+\bibitem{ref39}
+  Z. Liu et al., "A Multi-Head Neural Network with Unsymmetrical Constraints for Remaining Useful Life Prediction," \textit{Adv. Eng. Informatics}, 2021.
+\bibitem{ref40}
+  R. Diao et al., "Turbofan Engine Remaining Useful Life Prediction with Reliable Prediction Intervals via LSTM-Based Quantile Regression and Conformal Calibration," \textit{Sensors}, vol. 26, no. 7, art. 2249, 2026.
+\bibitem{ref41}
+  Y. Chung et al., "Beyond Pinball Loss: Quantile Methods for Calibrated Uncertainty Quantification," in \textit{Advances in Neural Information Processing Systems (NeurIPS)}, 2021.
+\bibitem{ref42}
+  O. Asif et al., "A Deep Learning Model for Remaining Useful Life Prediction of Aircraft Turbofan Engine on C-MAPSS Dataset," \textit{IEEE Access}, 2022.
+\bibitem{ref43}
+  S. Ly, R. Yang, N. Dixit, and H. D. Nguyen, "RUL-QMoE: Multiple Non-crossing Quantile Mixture-of-Experts for Probabilistic Remaining Useful Life Predictions of Varying Battery Materials," arXiv preprint arXiv:2512.23725, December 2025.
+\bibitem{ref44}
+  B. Yang, J. Zhang, R. Liu, D. Lin, P. Li, and C. L. P. Chen, "Point-to-Set Metric-Gated Mixture of Experts for Multisource Domain Adaptation Fault Diagnosis," \textit{IEEE Trans. Neural Netw. Learning Syst.}, Early Access, March 2025, doi: 10.1109/TNNLS.2025.3548894.
+\bibitem{ref45}
+  Z. Fan, W. Li, and K.-C. Chang, "A Two-Stage Attention-Based Hierarchical Transformer for Turbofan Engine Remaining Useful Life Prediction," \textit{Sensors}, vol. 24, no. 3, art. 824, 2024, doi: 10.3390/s24030824.
+\bibitem{ref46}
+  Y. Fu, Z. Feng, J. Zhou, and Q. Shi, "Degradation Modeling and Prognostic Analysis Under Unknown Failure Modes," \textit{IEEE Trans. Autom. Sci. Eng.}, 2024, doi: 10.1109/TASE.2024.3371143.
+\bibitem{ref47}
+  D. Wang, Q. Zhao, B. Yang, and K.-L. Tsui, "Joint Learning of Failure Mode Recognition and Prognostics for Degradation Processes," \textit{IEEE Trans. Autom. Sci. Eng.}, vol. 20, no. 4, pp. 2790--2802, 2023, doi: 10.1109/TASE.2022.3197094.
+\bibitem{ref48}
+  K. Dong, Z. Liu, Y. Zhang, and J. Liu, "Causal Inference-Based Fault Diagnosis and Abnormal Degradation Detection for Aero-Engine," in \textit{Proc. 2025 Int. Conf. Equipment Intelligent Operation and Maintenance (ICEIOM)}, 2025.
+\bibitem{ref49}
+  Y. Wang, X. Liu, C. Sun, R. Yan, and X. Chen, "Deep Learning-Based Sensor Selection for Failure Mode Recognition and Prognostics Under Time-Varying Operating Conditions," \textit{IEEE Trans. Autom. Sci. Eng.}, vol. 22, pp. 6993--7007, 2025, doi: 10.1109/TASE.2024.3469052.
+\end{thebibliography}
+
+\end{document}
