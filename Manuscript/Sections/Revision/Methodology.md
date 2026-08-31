@@ -161,8 +161,8 @@ Training configuration differed across hypotheses as follows:
 
 - **H1 (Linear Regression):** Deterministic OLS — no random seeds, no early stopping, no epochs.
 - **H2 (Normalization):** Compact LSTM; validation split is deterministic (last 20% of engines by unit ID); 5 seeds; 100 max epochs; patience = 15; test predictions clipped to [0, 125].
-- **H3 (Fault-mode architecture):** Full-capacity LSTM; validation split is random (per-run training seed); minimum 30-epoch warm-up before early stopping; 5 seeds; test predictions clipped to [0, 125].
-- **H4 (Loss functions):** Full-capacity LSTM; same as H3 except no minimum warm-up.
+- **H3 (Fault-mode architecture):** Full-capacity LSTM; validation split is deterministic (engine-level shuffle, seed = 42, fixed across all model seeds); minimum 30-epoch warm-up before early stopping; 5 seeds; test predictions clipped to [0, 125].
+- **H4 (Loss functions):** Full-capacity LSTM; validation split is deterministic (last 20% of engines by unit ID); 5 seeds; test predictions clipped to [0, 125]; no minimum warm-up.
 
 General settings applied within each hypothesis unless overridden above:
 
@@ -185,8 +185,8 @@ The feature set and validation-split method differ across hypotheses, as shown i
 |-----------|------------|-----------------|---------|
 | H1 | Sensors + op cols (OLS) | N/A (deterministic OLS) | Linear regression (OLS) |
 | H2 | Sensors + op cols (incl. op1/op2/op3) | Last 20% by unit ID (deterministic) | Compact LSTM (LSTM₂ hidden=32) |
-| H3 | Sensors only (no op cols); predictions clipped to [0, 125] at evaluation | Random 20% (per-run training seed); 30-epoch minimum warm-up | Full LSTM (LSTM₂ hidden=64) |
-| H4 | Sensors only (no op cols) | Random 20% (per-run training seed) | Full LSTM (LSTM₂ hidden=64) |
+| H3 | Sensors only (no op cols); predictions clipped to [0, 125] at evaluation | Deterministic 20% (engine shuffle, seed = 42); 30-epoch minimum warm-up | Full LSTM (LSTM₂ hidden=64) |
+| H4 | Sensors only (no op cols) | Deterministic 20% (last 20% by unit ID) | Full LSTM (LSTM₂ hidden=64) |
 
 For H2 the resulting input dimension F is 17 (FD001: 14 sensors + 3 op), 18 (FD003: 15 sensors + 3 op), or 23 (FD002/FD004 after residualisation: 20 sensors + 3 op). For H3/H4 F is 14 (FD001), 15 (FD003), or 20 (FD002/FD004 after residualisation). **Note:** The feature and split differences between H2 and H3 reflect independent implementation choices made prior to analysis; they mean that the two hypotheses are not directly cross-comparable in absolute RMSE terms. Each hypothesis is interpreted relative to its own baseline condition.
 
