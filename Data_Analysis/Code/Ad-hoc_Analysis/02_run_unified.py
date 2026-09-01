@@ -62,6 +62,7 @@ SEEDS    = [0, 1, 2, 3, 4]
 RUL_CLIP = 125
 K_GATE   = 10          # GatingNet prefix length
 PATIENCE = 15
+MIN_EPOCHS = 30   # don't allow early stopping before this epoch
 MAX_EPOCHS = 300
 LR       = 1e-3
 WD       = 1e-4
@@ -151,7 +152,7 @@ def run_one(cond_id, norm_name, model_type, dataset, seed) -> dict:
             best_val = val_loss
             best_sd  = {k: v.cpu().clone() for k, v in model.state_dict().items()}
             no_improve = 0
-        else:
+        elif epoch >= MIN_EPOCHS:
             no_improve += 1
             if no_improve >= PATIENCE:
                 break
