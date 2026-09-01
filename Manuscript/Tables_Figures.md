@@ -150,7 +150,7 @@
 | **M2** | **Soft Gating (GMM-weighted)** | **12.28 ± 0.57** | p=0.125 (equiv.) | **18.82 ± 1.56** | p=1.00 (equiv.) |
 | M3 | Attention Gate (end-to-end)     | 13.24 ± 1.69 | p=0.625 (equiv.) | 17.30 ± 1.04 | p=0.625 (equiv.) |
 
-†p_BH=0.024 vs M0 (two-sided Mann-Whitney U, BH-FDR; d=2.82/3.64). M2/M3 p-values: paired two-sided Wilcoxon signed-rank. Results over 5 random seeds. M1 FD004 degradation caused by test-time cluster assignment collapse (ratio 1:247).
+†p_BH=0.024 vs M0 (two-sided Mann-Whitney U, BH-FDR; d=3.27/4.53). M2/M3 p-values: paired two-sided Wilcoxon signed-rank. Results over 5 random seeds. M1 FD004 degradation caused by test-time cluster assignment collapse (ratio 1:247).
 
 **Caption:**
 > Performance comparison of four fault-mode separation architectures on the two multi-fault-mode CMAPSS sub-datasets (FD003 and FD004). GMM clustering identifies two statistically well-separated fault modes (Silhouette = 0.761 for FD003, 0.750 for FD004). GMM hard routing (M1) substantially degrades RMSE on both datasets (+156% FD003; +76% FD004; p_BH = 0.024), driven by test-time cluster assignment collapse (247:1 ratio on FD004) and training-split sensitivity (std=8.74 on FD003). Soft gating (M2) and end-to-end attention routing (M3) recover to baseline-equivalent performance, avoiding the catastrophic hard-routing failure at negligible computational overhead. Gate confidence (mean max(w₀, w₁)) was 0.727 ± 0.165 on FD003 and 0.676 ± 0.055 on FD004, reported descriptively.
