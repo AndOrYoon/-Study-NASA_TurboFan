@@ -53,21 +53,19 @@
              country={South Korea}}
 
 \begin{abstract}
-Reliable Prognostic and Health Management (PHM) systems for turbofan engines embed interdependent design decisions — RUL label clipping, sensor normalization, fault-mode architecture, and training loss function — whose contributions to predictive reliability are rarely isolated. This study presents a controlled ablation across all four NASA CMAPSS sub-datasets (FD001–FD004), covering five clipping thresholds, seven normalization strategies, four fault-mode architectures, and seven loss functions, with all comparisons Benjamini-Hochberg FDR-corrected.
+Reliable Prognostic and Health Management (PHM) systems for turbofan engines embed interdependent design decisions — RUL label clipping, sensor normalization, fault-mode architecture, and training loss function — whose contributions to predictive reliability are rarely isolated. A controlled ablation across all four NASA CMAPSS sub-datasets (FD001–FD004) covers five clipping thresholds, seven normalization strategies, four fault-mode architectures, and seven loss functions, with all comparisons Benjamini-Hochberg FDR-corrected.
 
-Fleet min-max normalization outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD004 but exhibits anomalously high inter-seed variance on FD003 (RMSE std = 12.86 vs.\ $\leq\!1.84$ elsewhere), traced to co-existing HPC and fan fault modes rather than normalization failure. An unsupervised attention-gate model (M3) routes engines to fault-specific branches from ten initial observed cycles, reducing FD003 RMSE by 65.8\% (14.78 ± 1.32 vs. 43.23 ± 0.18) and NASA Score by 98.8\%, while remaining immune to the test-time cluster collapse that degrades Gaussian Mixture Model (GMM) hard-routing by 75.4\% on FD004. No custom loss achieves statistically detectable improvement over MSE after multiple-comparison correction (N = 5 seeds; minimum detectable $d \approx 2.0$); removing RUL clipping inflates NASA prognostic scores by up to 306,000-fold regardless of loss design.
+Fleet min-max normalization outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD004 but exhibits anomalously high inter-seed variance on FD003 (RMSE std = 12.86 vs.\ $\leq\!1.84$ elsewhere), traced to co-existing HPC and fan fault modes rather than normalization failure. An attention-gate model (M3) routes engines to fault-specific branches from ten initial cycles, reducing FD003 RMSE by 65.8\% (14.78 ± 1.32 vs. 43.23 ± 0.18) and NASA Score by 98.8\%, while remaining immune to the test-time cluster collapse that degrades Gaussian Mixture Model (GMM) hard-routing by 75.4\% on FD004. No custom loss achieves statistically detectable improvement over MSE after multiple-comparison correction (N = 5 seeds); removing RUL clipping inflates NASA prognostic scores by up to 306,000-fold regardless of loss design.
 
-These findings suggest a three-tier design priority --- label engineering, fault-mode architecture, loss function --- where each tier produced qualitatively larger effects than the tier below it in the present experiments; a systematic gate misclassification analysis identifies gate confidence as an indicator of routing decisiveness, summarising the relative priorities observed across the four CMAPSS sub-datasets as a structured starting point requiring validation on representative fleet data before operational deployment.
+These findings suggest a three-tier design priority --- label engineering, fault-mode architecture, loss function --- where each tier produced qualitatively larger effects than the tier below it in the present experiments; gate misclassification analysis identifies gate confidence as an indicator of routing decisiveness, summarising priorities across the four CMAPSS sub-datasets as a structured starting point requiring validation on representative fleet data before operational deployment.
 \end{abstract}
 
 \begin{keyword}
 Remaining useful life prediction \sep
 Prognostics and health management \sep
 Turbofan engine \sep
-NASA CMAPSS \sep
-LSTM \sep
-Fault-mode gating \sep
-Normalization ablation
+Fault-mode routing \sep
+Sensor normalization
 \end{keyword}
 
 \end{frontmatter}
@@ -744,7 +742,7 @@ Collectively, three findings carry direct implications for PHM practice. First, 
 
 \section*{Funding}
 
-This work was supported by the National IT Industry Promotion Agency (NIPA) grant funded by the Ministry of Science and ICT (No. XXXX, Development of an Integrated Full-Lifecycle Operation Platform Technology for Ensuring Manufacturing Data Reliability).
+This work was supported by National IT Industry Promotion Agency (NIPA) grant funded by the Korea government (MSIT) (Development of Physical Data Quality Management Technologies for Physical AI, No.RS-2026-25621690).
 
 \section{Data and Code Availability}
 
