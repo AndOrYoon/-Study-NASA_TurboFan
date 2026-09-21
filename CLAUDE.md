@@ -40,6 +40,7 @@ C:\BMAD_PY313\
 ├── Data_Analysis/
 │   ├── Analysis_Plan.md        ← Canonical experiment design for H2/H5/H6/H7
 │   ├── 주요이슈_및_의사결정.md   ← All resolved design decisions (read before changing anything)
+│   ├── Ad-hoc_Analysis/        ← Post-hoc analysis reports and revision planning
 │   ├── Code/
 │   │   ├── shared/
 │   │   │   └── op_condition_utils.py  ← K-means residualization (used by H5 & H6)
@@ -49,17 +50,34 @@ C:\BMAD_PY313\
 │   │   │   ├── phase1_clustering/
 │   │   │   ├── phase2_models/  ← h6_p2_model_utils.py (shared backbone + utils)
 │   │   │   └── phase3_evaluation/
-│   │   └── H7_loss_function/   ← 00–08 scripts + run_all_h7.py
-│   └── Results/                ← Output CSVs, figures, model checkpoints
+│   │   ├── H7_loss_function/   ← 00–08 scripts + run_all_h7.py
+│   │   └── Ad-hoc_Analysis/    ← Unified protocol & corrected H6 scripts
+│   │       ├── 01_unified_data_loader.py
+│   │       ├── 02_run_unified.py
+│   │       ├── 03_analyze_results.py
+│   │       ├── 04_run_h6_corrected.py  ← C-Full corrected H6 (M0/M1/M2/M3, 40 runs)
+│   │       └── 05_run_fd4_unified_op.py ← FD004 op-condition consistency check
+│   └── Results/
+│       ├── H{2,5,6,7}_*/       ← Original experiment CSVs, figures, checkpoints
+│       ├── Ad-hoc_Analysis/    ← unified_results.csv, statistical_tests.csv, figures/
+│       └── H6_corrected/       ← h6_corrected_results.csv (corrected protocol, 40 runs)
 └── Manuscript/
     ├── Full-Text_Manuscript/
-    │   └── manuscript_full_text.md  ← Primary compiled manuscript (single source of truth)
+    │   ├── manuscript_full_text.md       ← Primary compiled manuscript (single source of truth)
+    │   └── Revision/
+    │       ├── manuscript_full_text_reviewed(FFFN).md  ← Revision draft with corrected results
+    │       └── manuscript_full_text_FFN_reviewed_comments.md  ← Inline review comments (2026-08-31)
     ├── Sections/                ← Source section files (sync with manuscript_full_text.md)
     │   ├── Methodology.md
     │   └── Discussion_Implication.md
     ├── Figures/                 ← Fig1–Fig8 (final manuscript figures)
     ├── Tables/                  ← Table1–Table5 CSV
     ├── Tables_Figures.md        ← English figure/table captions
+    ├── Submission/
+    │   └── RESS/               ← RESS (Elsevier) LaTeX submission package
+    │       ├── main.tex        ← Original submission LaTeX
+    │       └── Revision/
+    │           └── main_revision.tex  ← Revised LaTeX with Option A+ applied
     └── Pre-Review/
         ├── Revision_Changelog.md
         └── TII_Virtual_Submission_Review/
@@ -182,11 +200,24 @@ Defined in `Data_Analysis/Code/H7_loss_function/02_loss_functions.py`. All share
 |-----------|---------|-----------|
 | H2 (clipping) | Partially accepted | clip=125 minimises RMSE; clip=130 minimises NASA on FD002/FD004 |
 | H5 (normalization) | Rejected | Fleet MinMax (N1) is best; per-unit and RevIN are significantly worse |
-| H6 (fault mode) | Accepted (M3) | M3 Attention Gate: −65.8% RMSE on FD003 vs baseline; RMSE=14.78±1.32 |
+| H6 (fault mode) | Partially revised — see note | M1 hard routing significantly worse (p_BH=0.0045); M2/M3 statistically equivalent to M0. Original 65.8% claim was from a collapsed M0 baseline. |
 | H7 (loss functions) | Rejected | No loss beats MSE after BH-FDR; clip dominates loss choice |
 
 Results CSVs: `Data_Analysis/Results/H{2,5,6,7}_*/`
+Corrected H6 results: `Data_Analysis/Results/H6_corrected/h6_corrected_results.csv`
+Unified N1 vs N3 results: `Data_Analysis/Results/Ad-hoc_Analysis/`
 Manuscript-ready figures/tables: `Manuscript/Figures/`, `Manuscript/Tables/`
+
+### H6 Corrected Results (C-Full protocol, 5 seeds, 40 runs — 2026-08-27)
+
+| Model | FD003 RMSE±std | FD004 RMSE±std | vs M0 (FD003) | Significant? |
+|-------|---------------|---------------|--------------|-------------|
+| M0 (baseline) | 12.97 ± 0.67 | 18.96 ± 3.97 | — | — |
+| M1 (hard routing) | 33.25 ± 8.74 | 33.28 ± 2.05 | +20.28 worse | ✅ p_BH=0.0045 |
+| M2 (soft gating) | 12.28 ± 0.57 | 18.82 ± 1.56 | −0.69 | ✗ p_BH=0.352 |
+| M3 (attention gate) | 13.24 ± 1.69 | 17.30 ± 1.04 | +0.27 worse | ✗ p_BH=0.754 |
+
+> ⚠️ **Why original 65.8% was wrong:** H6 M0 FD003 (original RMSE=43.23) showed mean-prediction collapse — all 5 seeds predicted a constant ~87 for all 100 test engines (std<0.0002). Root causes: (1) fixed val split seed=42, (2) no MIN_EPOCHS warmup, (3) single MSE loss with weak gradient near trivial solution. M3 survived because auxiliary branch losses provided extra gradient paths. After correcting the protocol, M0 converges normally (12.97±0.67) and M3 shows no statistically significant advantage.
 
 ---
 
@@ -202,22 +233,34 @@ See `Data_Analysis/주요이슈_및_의사결정.md` for full rationale. Summary
 - **H2 runs:** 20 (deterministic Ridge; seeds are meaningless for `LinearRegression`)
 - **H2 = prerequisite, not contribution:** clip=125 is confirmed established standard [5,6]. Do not reframe H2 as a novel contribution in the manuscript — it belongs in setup/methods context only.
 - **M3 is LSTM-specific:** Pilot experiments (T3) showed that adding any attention mechanism (Transformer or self-attention LSTM) to the backbone makes M3 routing redundant — attention already captures early-cycle fault patterns implicitly. M3's value is its lightweight overhead (4.9K params, <5%) on top of a standard sequential LSTM backbone.
+- **H6 M3 framing (post ad-hoc):** Do NOT claim "65.8% RMSE reduction." Corrected framing: M3's auxiliary branch loss structure provides **training robustness** — it avoids mean-prediction collapse under adverse validation splits. FD004 std improvement (3.97→1.04) is the concrete evidence. Fault-mode routing performance claim (vs properly trained M0) is not statistically supported.
+- **H6 Three-tier Tier 2 reframing:** Tier 2 (architecture) is a **design boundary**, not a performance lever. M1 hard routing is statistically significantly worse (p_BH=0.0045); M2/M3 recover to baseline. The value is avoiding M1-type collapse, not exceeding baseline.
+- **FD004 op-condition utils equivalence:** `op_condition_utils.py` and `fit_op_residual_fd004()` are mathematically identical (bit-for-bit same output). Residual differences between unified-experiment and corrected-H6 FD004 results come from pipeline-level differences (column naming → RNG state), not from the op-condition step itself.
 
 ---
 
-## Manuscript Status (as of 2026-07-09)
+## Manuscript Status (as of 2026-09-10)
 
-**Target journal:** IEEE TII. **Expected acceptance rate:** 35–45%.
+**Target journal:** RESS (Reliability Engineering & System Safety, Elsevier). **Expected acceptance rate:** 45–60%.  
+> TII was deprioritized (2026-07-10): CMAPSS synthetic-data limitation is borderline for TII's "outstanding and original" bar. Do not reference TII workflows (ScholarOne, IEEE format) going forward.
 
-**Primary manuscript:** `Manuscript/Full-Text_Manuscript/manuscript_full_text.md`  
-**When editing sections:** always sync changes to the corresponding file in `Manuscript/Sections/`.
+**🟢 SUBMITTED to RESS on 2026-09-09. Now awaiting peer review.**
 
-### Core Contributions (current framing)
+**Submitted via:** Elsevier Editorial Manager  
+**Submission package:** `Manuscript/Submission/RESS/` (LaTeX, elsarticle.cls)  
+**Primary manuscript (original):** `Manuscript/Full-Text_Manuscript/manuscript_full_text.md`  
+**Funding:** "Development of Physical Data Quality Management Technologies for Physical AI", No. RS-2026-25621690, Korea government (MSIT).
 
-1. First controlled normalisation ablation — Fleet MinMax (N1) significantly outperforms per-unit and RevIN; FD003 inter-seed variance is a fault-mode diagnostic signal.
-2. M3 Attention Gate — 65.8% RMSE reduction on FD003 using first 10 cycles; 4.9K parameter GatingNet, no backbone modification needed.
-3. Three-tier design hierarchy — label engineering > fault-mode architecture > loss function, established via joint cross-dataset ablation.
-4. Practical deployment framework — ordered design decisions with operational cost quantification.
+### Next Steps
+
+Waiting for reviewer comments from RESS. When review results arrive, revision work will resume based on reviewer feedback.
+
+### Core Contributions (revised framing — post ad-hoc analysis)
+
+1. First controlled normalisation ablation — Fleet MinMax (N1) significantly outperforms per-unit and RevIN on FD001–FD003 (p_BH=0.009); FD004 N1 advantage disappears when op columns are removed (protocol interaction).
+2. M3 Attention Gate — **training robustness** via auxiliary branch loss: avoids mean-prediction collapse under adverse validation splits. FD004 std: 3.97→1.04. No statistically significant RMSE improvement over a properly trained M0 baseline.
+3. Architecture as design boundary — M1 hard routing is statistically significantly worse than baseline (p_BH=0.0045, both datasets); M2/M3 recover to M0 level. Architecture choice protects against collapse, not lifts performance.
+4. Practical deployment framework — ordered design decisions: label engineering > normalisation ≈ architecture > loss function.
 
 ### Phase 2 Pilot Results (excluded from manuscript)
 
