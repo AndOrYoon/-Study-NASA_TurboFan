@@ -1,61 +1,64 @@
 # Turbofan Engine RUL Prediction: A Cross-Dataset Ablation Study
 
-**Paper title:** From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction  
-**Target journal:** Reliability Engineering & System Safety (Elsevier, RESS)  
-**Status:** Submission ready (September 2026)
+**Paper:** From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction  
+**Target journal:** Engineering Applications of Artificial Intelligence (EAAI, Elsevier/IFAC, IF ~7.8, Q1)  
+**Submission branch:** [`submission/eaai`](../../tree/submission/eaai)  
+**Status:** EAAI submission preparation complete (September 2026)
 
 ---
 
 ## Overview
 
-This repository contains the full experimental pipeline and manuscript for a controlled ablation study on turbofan engine Remaining Useful Life (RUL) prediction using the NASA CMAPSS benchmark (FD001–FD004).
+Controlled ablation study isolating four interdependent design decisions in turbofan engine Remaining Useful Life (RUL) prediction, evaluated on the NASA C-MAPSS benchmark (FD001–FD004) with a shared stacked-LSTM backbone.
 
-Four interdependent design decisions are systematically isolated and tested:
+| Hypothesis | Factor | Levels | Verdict |
+|-----------|--------|--------|---------|
+| H2 | RUL label clipping threshold | 5 (75, 100, 125, 130, None) | Partially accepted |
+| H5 | Sensor normalization strategy | 7 (N1–N7) | Rejected (N1 wins) |
+| H6 | Fault-mode routing architecture | 4 (M0–M3) | Partially revised |
+| H7 | Training loss function | 7 (L1–L7) | Rejected (MSE wins) |
 
-| Hypothesis | Factor | Levels |
-|-----------|--------|--------|
-| H2 | RUL label clipping threshold | 5 (75, 100, 125, 130, None) |
-| H5 | Sensor normalization strategy | 7 (N1–N7) |
-| H6 | Fault-mode architecture | 4 (M0–M3) |
-| H7 | Training loss function | 7 (L1–L7) |
-
-All comparisons are Wilcoxon rank-sum tested with Benjamini-Hochberg FDR correction (α = 0.05).  
-**Total training runs: 800+** (5 seeds × conditions × 4 datasets)
+All comparisons: Wilcoxon rank-sum + Benjamini-Hochberg FDR correction (α = 0.05).  
+**Total training runs: 1,000+** across all hypotheses and datasets.
 
 ---
 
 ## Dataset
 
-**NASA CMAPSS** (C-MAPSS: Commercial Modular Aero-Propulsion System Simulation)
+**NASA C-MAPSS** (Commercial Modular Aero-Propulsion System Simulation)
 
 | Sub-dataset | Train engines | Test engines | Op. conditions | Fault modes |
 |-------------|--------------|-------------|---------------|-------------|
-| FD001 | 100 | 100 | 1 | HPC degradation only |
-| FD002 | 260 | 259 | 6 | HPC degradation only |
+| FD001 | 100 | 100 | 1 | HPC degradation |
+| FD002 | 260 | 259 | 6 | HPC degradation |
 | FD003 | 100 | 100 | 1 | HPC + Fan degradation |
 | FD004 | 249 | 248 | 6 | HPC + Fan degradation |
 
-- 21 raw sensors, space-separated `.txt` format, no header
-- Column order: `unit cycle op1 op2 op3 s1…s21`
+Column order: `unit cycle op1 op2 op3 s1…s21`  
+RUL label: piecewise-linear, clip = 125 cycles.
 
 ---
 
 ## Shared Backbone
 
-Stacked LSTM used across all hypotheses:
+Stacked LSTM used identically across all hypotheses:
 
 ```
-LSTM1(64) → full sequence → Dropout(0.2)
-LSTM2(64) → last timestep → Dropout(0.2) → FC(64→32→ReLU→1)
+Input(30 × F) → LSTM1(64, return_sequences=True) → Dropout(0.2)
+             → LSTM2(64, return_sequences=False) → Dropout(0.2)
+             → FC(64) → ReLU → FC(32) → ReLU → FC(1)
 ```
 
-Window: 30 cycles | Batch: 256 | LR: 1e-3 (Adam) | WD: 1e-4 | Patience: 15
+Window: 30 cycles | Batch: 256 | LR: 1e-3 (Adam) | WD: 1e-4 | Early-stop patience: 15  
+Seeds: [0, 1, 2, 3, 4] — report mean ± std over 5 runs.
 
 ---
 
 ## Key Results
 
-### H2 — RUL Clipping (Ridge regression, 20 runs)
+### H2 — RUL Clipping
+
+clip = 125 minimises RMSE across all datasets. clip = None causes catastrophic NASA Score inflation on FD003 (306,000× vs. clip = 125).
 
 | Clip | FD001 RMSE | FD002 RMSE | FD003 RMSE | FD004 RMSE |
 |------|-----------|-----------|-----------|-----------|
@@ -65,57 +68,67 @@ Window: 30 cycles | Batch: 256 | LR: 1e-3 (Adam) | WD: 1e-4 | Patience: 15
 | 130 | 22.06 | 31.83 | 22.24 | 34.04 |
 | None | 31.90 | 33.05 | 56.09 | 46.99 |
 
-**Verdict (partially accepted):** clip=125 is optimal or statistically tied-optimal across all datasets. clip=None yields catastrophic NASA Score on FD003 (4,014,724 vs. 13.09 at clip=125, a 306,000-fold increase).
+---
+
+### H5 — Sensor Normalization
+
+Fleet min-max (N1) significantly outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD003 (p_BH = 0.009). No statistically detectable difference on FD004 under the unified protocol (p_BH = 0.46 — protocol-sensitive multi-condition dataset).
+
+| Strategy | FD001 RMSE | FD002 RMSE | FD003 RMSE | FD004 RMSE |
+|----------|-----------|-----------|-----------|-----------|
+| **N1 Fleet MinMax** | **14.06** | **20.62** | **14.57** | **18.96** |
+| N3 Per-unit MinMax | 16.37 | 24.41 | 15.24 | 19.09 |
+| N7 RevIN | 14.92 | 28.18 | 15.01 | 21.36 |
+
+RevIN is competitive on FD001 but degrades substantially on FD002/FD004 (multi-condition datasets where instance statistics encode operating-condition offsets, not degradation).
 
 ---
 
-### H5 — Sensor Normalization (LSTM, 5 seeds × 7 strategies × 4 datasets = 140 runs)
+### H6 — Fault-Mode Architecture
 
-- **Fleet MinMax (N1):** Best on FD001/FD002/FD004 (RMSE ≈ 14.1–14.6); significantly outperforms all alternatives under BH-FDR correction
-- Per-unit strategies (N3–N6): significantly inferior on FD001, FD002, FD004
-- RevIN (N7): competitive on FD001 (14.92), inferior on FD002/FD004 (18.2+)
-- FD003 N1 std = 12.86 (vs. ≤1.84 elsewhere): anomalous variance is a **diagnostic signal of latent fault-mode heterogeneity**, not a normalization failure
+> ⚠️ **Corrected results** — original protocol had M0 mean-prediction collapse on FD003 (all 5 seeds predicted constant ~87; RMSE = 43.23). After correcting the protocol (C-Full: randomised val split, MIN_EPOCHS warmup, 5 seeds × 8 conditions = 40 runs):
 
-**Verdict (rejected):** Fleet MinMax is the clear winner. Per-unit adaptation is counterproductive on homogeneous fleets.
+| Model | FD003 RMSE ± std | FD004 RMSE ± std | vs M0 (FD003) | p_BH |
+|-------|-----------------|-----------------|--------------|------|
+| M0 — Single LSTM (baseline) | 12.97 ± 0.67 | 18.96 ± 3.97 | — | — |
+| M1 — Hard Routing (GMM argmax) | 33.25 ± 8.74 | 33.28 ± 2.05 | +20.28 worse | **0.0045** ✅ |
+| M2 — Soft Gating (GMM probs) | 12.28 ± 0.57 | 18.82 ± 1.56 | −0.69 | 0.352 |
+| M3 — Attention Gate (K=10 cycles) | 13.24 ± 1.69 | 17.30 ± 1.04 | +0.27 | 0.754 |
 
----
-
-### H6 — Fault-Mode Architecture (LSTM, 5 seeds, FD003/FD004)
-
-| Model | FD003 RMSE±std | FD003 NASA | FD004 RMSE±std | FD004 NASA |
-|-------|---------------|-----------|---------------|-----------|
-| M0 — Single LSTM (baseline) | 43.23±0.18 | 34,339 | 28.05±1.74 | 10,586 |
-| M1 — Hard Routing (GMM) | 32.45±11.37 | 27,098 | 49.20±7.17 | 132,003 |
-| M2 — Soft Gating (GMM) | 26.16±14.81 | 20,881 | 30.71±0.73 | 50,715 |
-| **M3 — Attention Gate (K=10)** | **14.78±1.32** | **425** | **28.33±1.03** | **13,229** |
-
-**Verdict (accepted — M3):** M3 achieves −65.8% RMSE and −98.8% NASA Score on FD003 vs. M0. Routes engines from first 10 cycles only (applicable at commissioning time). M1 collapses on FD004 due to test-time cluster assignment collapse (247:1 ratio).
+**Interpretation:**
+- M1 hard routing is statistically significantly worse than M0 (p_BH = 0.0045, both datasets) due to test-time cluster collapse (247:1 assignment ratio on FD004).
+- M2 and M3 recover to M0-level RMSE — no statistically detectable improvement.
+- M3's auxiliary branch loss provides **training robustness**: it avoids mean-prediction collapse under adverse validation splits. FD004 inter-seed std drops from 3.97 (M0) to 1.04 (M3).
+- Architecture choice is a **reliability safeguard**, not a performance lever.
 
 ---
 
-### H7 — Loss Function (LSTM, 5 seeds × 7 losses × 4 clips × 4 datasets = 560 runs)
+### H7 — Training Loss Function
 
-- No custom loss achieves statistically significant improvement over MSE (L1) after BH-FDR correction across 96 comparisons (minimum p_BH = 0.176)
-- clip=None is the dominant source of NASA Score variance, not the loss function choice
+No custom loss achieves statistically significant improvement over MSE after BH-FDR correction across 96 pairwise comparisons (minimum p_BH = 0.176). RUL clipping is the dominant source of NASA Score variance, not the loss function.
 
-**Verdict (rejected):** Custom loss functions provide no statistically detectable benefit. RUL clipping dominates loss function selection.
+| Loss | Key parameter | Verdict |
+|------|-------------|---------|
+| L1 MSE (baseline) | — | Reference |
+| L2 NASA Score Loss | differentiable approx | p_BH > 0.05, not significant |
+| L5 TWA | λ_t=10, λ_a=1 | p_BH > 0.05, not significant |
+| L7 HubA | δ=20, λ_a=3 | p_BH > 0.05, not significant |
 
 ---
 
-## Three-Tier Design Hierarchy (Core Contribution)
+## Design Priority Ordering
 
 ```
-TIER 1 [Critical] — Label Engineering    →  clip = 125
-                                              Up to 306,000× NASA Score difference
-        ↓
-TIER 2 [Important] — Fault-Mode Architecture  →  M3 Attention Gate (FD003/FD004)
-                                                   −65.8% RMSE on FD003
-        ↓
-TIER 3 [Secondary] — Loss Function        →  MSE (L1) default
-                                              No statistically detectable gain
+UPSTREAM ──────────────────────────────────── DOWNSTREAM
+
+[1] Label Engineering     [2] Normalization     [3] Architecture     [4] Loss Function
+    clip = 125                Fleet MinMax           Avoid M1              MSE default
+    306,000× NASA Score       p_BH = 0.009           p_BH = 0.0045         No gain after
+    if miscalibrated          on FD003               significantly          BH-FDR
+                                                      worse
 ```
 
-Each tier produces qualitatively larger effects than the tier below it.
+Upstream choices produce larger and more consistent effects than downstream choices. Resolve each tier before investing in the next.
 
 ---
 
@@ -123,57 +136,69 @@ Each tier produces qualitatively larger effects than the tier below it.
 
 ```
 C:\BMAD_PY313\
-├── Dataset/                        ← Raw CMAPSS .txt files + EDA outputs
+├── Dataset/                            ← Raw CMAPSS .txt files + EDA outputs
 │   ├── train/test_FD00{1-4}.txt
 │   ├── RUL_FD00{1-4}.txt
-│   └── Figure/                     ← EDA plots (fig01–fig12)
-├── Hypothesis/                     ← Literature review, research gap analysis
+│   └── Figure/                         ← EDA plots (fig01–fig12)
+├── Hypothesis/                         ← Literature review, research gap analysis
 ├── Data_Analysis/
-│   ├── Analysis_Plan.md            ← Canonical experiment design
+│   ├── Analysis_Plan.md
 │   ├── Code/
 │   │   ├── shared/
-│   │   │   └── op_condition_utils.py   ← K-means residualization (H5/H6)
-│   │   ├── H2_clipping/            ← Scripts 01–05
-│   │   ├── H5_normalization/       ← Scripts 01–06
-│   │   ├── H6_fault_mode/          ← phase1/phase2/phase3
-│   │   └── H7_loss_function/       ← Scripts 00–08 + run_all_h7.py
-│   └── Results/                    ← Output CSVs, figures, model checkpoints
+│   │   │   └── op_condition_utils.py   ← K-means residualization (FD002/FD004)
+│   │   ├── H2_clipping/                ← Scripts 01–05
+│   │   ├── H5_normalization/           ← Scripts 01–06
+│   │   ├── H6_fault_mode/              ← phase1 / phase2 / phase3
+│   │   ├── H7_loss_function/           ← Scripts 00–08 + run_all_h7.py
+│   │   └── Ad-hoc_Analysis/            ← Unified N1/N3 protocol + corrected H6
+│   └── Results/
+│       ├── H{2,5,6,7}_*/               ← Experiment CSVs, figures, checkpoints
+│       ├── Ad-hoc_Analysis/            ← unified_results.csv, statistical_tests.csv
+│       └── H6_corrected/               ← h6_corrected_results.csv (C-Full, 40 runs)
 └── Manuscript/
     ├── Full-Text_Manuscript/
     │   └── manuscript_full_text.md     ← Primary compiled manuscript
-    ├── Sections/                   ← Source section files
-    ├── Figures/                    ← Final manuscript figures (Fig1–Fig8)
-    ├── Tables/                     ← Tables 1–5 CSV
+    ├── Sections/                       ← Source section files
+    ├── Figures/                        ← Final figures (Fig1–Fig8)
+    ├── Tables/                         ← Tables 1–5 CSV
     └── Submission/
-        ├── RESS/                   ← Submission package (main.tex + figures)
-        │   ├── main.tex
-        │   ├── main.pdf
-        │   ├── Fig1–Fig8.png
-        │   ├── highlights.txt
-        │   ├── declaration_ai_use.txt
-        │   ├── conflict_of_interest.txt
-        │   └── credit_author_statement.txt
-        └── Cover_Letter/
-            └── Cover_Letter_RESS_draft.md
+        ├── RESS/
+        │   └── Revision/
+        │       └── main_revision.tex   ← Final RESS revision (Option A+; withdrawn 2026-09-23)
+        └── EAAI/                       ← Active submission workspace (this branch)
+            ├── main_EAAI.tex           ← Full manuscript (preprint 10pt, ~48p)
+            ├── main_EAAI_anon.tex      ← Double-blind anonymous version
+            ├── titlepage_EAAI.tex      ← Author info (separate for blind review)
+            ├── highlights.txt          ← 5 highlights (≤85 chars each)
+            ├── Abstract_EAAI.md        ← v2.0 (AI/engineering distinction)
+            ├── References_EAAI.md      ← v1.1 (54 refs, Section Usage Map)
+            └── Preparation_for_Submitting_EAAI.md  ← 7-task checklist
 ```
 
 ---
 
-## Submission Status
+## Submission History
 
-| Item | Status |
-|------|--------|
-| All experiments (H2/H5/H6/H7) | ✅ Complete |
-| Manuscript (full text) | ✅ Complete |
-| LaTeX conversion (elsarticle) | ✅ Complete |
-| Figures (Fig1–Fig8) | ✅ Complete |
-| Cover Letter | ✅ Complete (10 September 2026) |
-| Funding acknowledgement | ✅ NIPA No.RS-2026-25621690 |
-| AI use declaration | ✅ Confirmed |
-| Abstract word count | ✅ ≤250 words |
-| Keywords | ✅ 5 keywords finalized |
-| PDF compilation | ✅ 67 pages |
-| **RESS submission** | 🔲 In progress |
+| Date | Event |
+|------|-------|
+| 2026-09-09 | Submitted to RESS (Reliability Engineering & System Safety) |
+| 2026-09-23 | RESS desk rejection — scope mismatch ("signal processing / fault diagnosis no longer in scope") |
+| 2026-09-23 | Retargeted to **EAAI**; `submission/eaai` branch created |
+| 2026-09-23 | EAAI preparation complete (Tasks 1–7); Zenodo DOI pending |
+
+---
+
+## EAAI Submission Checklist
+
+| # | Task | Status |
+|---|------|--------|
+| 1 | Abstract rewrite (AI/engineering distinction + acronym definitions) | ✅ |
+| 2 | Keywords reduced to 6 | ✅ |
+| 3 | Journal name updated in LaTeX | ✅ |
+| 4 | Highlights (5 bullets, ≤85 chars each) | ✅ |
+| 5 | Double-blind files separated | ✅ |
+| 6 | Data Availability Statement inserted | ✅ (Zenodo DOI pending) |
+| 7 | Generative AI declaration + CRediT contributions | ✅ |
 
 ---
 
@@ -183,18 +208,27 @@ C:\BMAD_PY313\
 # Activate virtual environment
 NASA_TurboFan\Scripts\activate
 
-# Run full H7 experiment
+# Run all H7 loss function experiments
 python Data_Analysis\Code\H7_loss_function\run_all_h7.py
+
+# Run corrected H6 (C-Full protocol, 40 runs)
+python Data_Analysis\Code\Ad-hoc_Analysis\04_run_h6_corrected.py
 
 # Run single hypothesis stage
 python Data_Analysis\Code\H5_normalization\04_run_experiments.py
 ```
 
-- **Python:** 3.13 (TensorFlow not supported — PyTorch used)
-- **Virtual environment:** `C:\BMAD_PY313\NASA_TurboFan\`
+**Python:** 3.13 (TensorFlow not supported — PyTorch throughout)  
+**Virtual environment:** `C:\BMAD_PY313\NASA_TurboFan\`
 
 ---
 
-## Reference
+## Funding
 
-A. Saxena, K. Goebel, D. Simon, and N. Eklund, "Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation," in *Proc. 1st Int. Conf. Prognostics and Health Management (PHM08)*, Denver, CO, 2008.
+This work was supported by the National IT Industry Promotion Agency (NIPA) grant funded by the Korea government (MSIT): "Development of Physical Data Quality Management Technologies for Physical AI," No. RS-2026-25621690.
+
+---
+
+## Citation (preprint)
+
+> Yoon, Y. S., Lee, E. S., Kim, H., & Son, J. Y. (2026). *From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction.* Manuscript submitted to Engineering Applications of Artificial Intelligence.
