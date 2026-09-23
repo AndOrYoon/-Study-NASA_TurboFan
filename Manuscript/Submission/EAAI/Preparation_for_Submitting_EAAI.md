@@ -157,6 +157,7 @@ Supervision.
 | 5 | Double Anonymized 파일 분리 | R-1 | ✅ 완료 | 2026-09-23 |
 | 6 | Research Data + Data Statement | R-2 | ✅ 완료 | 2026-09-23 (DOI: 10.5281/zenodo.22910912) |
 | 7 | AI 선언 + CRediT | R-4 + R-5 | ✅ 완료 | 2026-09-23 |
+| 8 | Cover Letter 작성 | 저널 fit 근거 + 수정된 기여 framing | ✅ 완료 | 2026-09-23 (CoverLetter_EAAI.md) |
 
 ---
 
