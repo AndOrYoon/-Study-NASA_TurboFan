@@ -155,7 +155,7 @@ Supervision.
 | 3 | 저널명 변경 | DR-4 | ✅ 완료 | 2026-09-23 |
 | 4 | Highlights 작성 | R-3 | ✅ 완료 | 2026-09-23 |
 | 5 | Double Anonymized 파일 분리 | R-1 | ✅ 완료 | 2026-09-23 |
-| 6 | Research Data + Data Statement | R-2 | 🔶 일부완료 | 2026-09-23 (원고 내 DAS 삽입 완료; Zenodo DOI 등록은 별도 실행 필요) |
+| 6 | Research Data + Data Statement | R-2 | ✅ 완료 | 2026-09-23 (DOI: 10.5281/zenodo.22910912) |
 | 7 | AI 선언 + CRediT | R-4 + R-5 | ✅ 완료 | 2026-09-23 |
 
 ---
