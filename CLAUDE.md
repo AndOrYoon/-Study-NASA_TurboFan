@@ -244,7 +244,7 @@ See `Data_Analysis/주요이슈_및_의사결정.md` for full rationale. Summary
 **Target journal:** RESS (Reliability Engineering & System Safety, Elsevier). **Expected acceptance rate:** 45–60%.  
 > TII was deprioritized (2026-07-10): CMAPSS synthetic-data limitation is borderline for TII's "outstanding and original" bar. Do not reference TII workflows (ScholarOne, IEEE format) going forward.
 
-**🟢 SUBMITTED to RESS on 2026-09-09. Now awaiting peer review.**
+**🔴 RESS 투고 취소 (2026-09-23) — Scope 불일치. 다른 저널 재투고 준비 중.**
 
 **Submitted via:** Elsevier Editorial Manager  
 **Submission package:** `Manuscript/Submission/RESS/` (LaTeX, elsarticle.cls)  
@@ -253,7 +253,7 @@ See `Data_Analysis/주요이슈_및_의사결정.md` for full rationale. Summary
 
 ### Next Steps
 
-Waiting for reviewer comments from RESS. When review results arrive, revision work will resume based on reviewer feedback.
+RESS scope 불일치 확인 → 대안 저널 탐색 및 재투고 준비.
 
 ### Core Contributions (revised framing — post ad-hoc analysis)
 

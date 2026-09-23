@@ -32,15 +32,17 @@ This subsection should establish the overarching problem: many C-MAPSS studies c
 Relevant material includes:
 
 - the C-MAPSS benchmarking and reproducibility issues discussed by Ramasso and Saxena [3];
-- bundled CNN–LSTM–attention systems such as Deng et al. [25];
+- bundled CNN–LSTM–attention systems such as Deng et al. [25] and DA-LSTM Shi et al. (2024, RESS, 156 citations) ★NEW;
 - studies showing that label and preprocessing changes alone can substantially affect performance, such as Asif et al. [38]; and
 - the broader distinction between predictive performance and controlled causal attribution.
 
+**★NEW — 재현성 문제 (Freitas et al., 2026):** A reproducibility study of 21 Transformer-based FD001 models found that AGATT (originally reported RMSE = 11.45) reproduced as 15.99 ± 1.39 under 30-run execution — confirming that single-seed RMSE values systematically underrepresent central tendency. This directly motivates the present study's five-seed repeated design and BH-FDR correction.
+
 Recommended central sentence:
 
-> Existing studies demonstrate strong predictive performance, but their bundled experimental designs make it difficult to determine whether the reported gains originate from target construction, normalization, architecture, or loss design.
+> Existing studies demonstrate strong predictive performance, but their bundled experimental designs make it difficult to determine whether the reported gains originate from target construction, normalization, architecture, or loss design; and single-seed evaluation protocols introduce reproducibility concerns that further complicate cross-study comparison.
 
-The purpose is not to discount previous performance gains, but to show that **factor-level attribution remains unresolved**.
+The purpose is not to discount previous performance gains, but to show that **factor-level attribution remains unresolved** and that **statistical reliability of reported results is an independent concern**.
 
 ### II.B. RUL Label Construction and Sensor Normalization
 
@@ -49,12 +51,13 @@ This subsection should review the upstream design choices evaluated in H1 and H2
 - piecewise-linear RUL labeling and the conventional 125-cycle clipping threshold [4, 5];
 - prior work on clipping or adaptive label construction [16–18];
 - fleet-level, per-unit, and instance-level normalization;
-- RevIN and non-stationary time-series normalization [20, 22–24]; and
-- operating-condition clustering and residualization for FD002/FD004 [9, 21].
+- RevIN and non-stationary time-series normalization [20, 22–24];
+- operating-condition clustering and residualization for FD002/FD004 [9, 21]; and
+- **★NEW — Ruvaifa et al. (2026, *Array*):** the most systematic preprocessing ablation to date, comparing sensor selection criteria, sequence-length design, and normalization strategies across all four sub-datasets. Key finding: preprocessing impact exceeds architectural complexity in many cases. **Gap:** no pairwise statistical significance testing; normalization strategy is one of several factors rather than the primary controlled variable; operating-condition–normalization interaction on FD002/FD004 is not isolated.
 
 Recommended gap statement:
 
-> Although clipping and normalization are routinely adopted, their effects have rarely been compared systematically across all four C-MAPSS sub-datasets while holding the predictive backbone and remaining pipeline components fixed.
+> Although clipping and normalization are routinely adopted, and Ruvaifa et al. (2026) recently demonstrated their importance, no prior study has conducted pairwise statistical comparison of fleet-level, per-unit, and instance-level normalisation strategies across all four C-MAPSS sub-datasets under a controlled backbone-matched protocol with multiple-comparison correction.
 
 The Related Work section should not state in advance that fleet normalization is superior. It should explain **why a controlled comparison is necessary**; the empirical ranking and protocol sensitivity belong in the Results.
 
@@ -66,6 +69,7 @@ This subsection should connect the multi-fault characteristics of FD003/FD004 wi
 - clustering-based fault-mode separation;
 - hard routing and posterior-weighted soft routing;
 - mixture-of-experts and learned gating [28, 39, 40];
+- **★NEW — Xiong et al. (2023, *RESS*, 67 citations):** adaptive framework combining physics-informed FM classifier with DCNN and operating-condition-aware smoothing; ~7% RUL accuracy improvement on multi-fault sub-datasets. Relevant as a more principled FM-recognition approach than hard GMM routing, but does not isolate the effect of routing accuracy from the smoothing component;
 - full-trajectory clustering and joint fault-recognition/prognosis methods [42, 43]; and
 - limitations of early fault-mode recognition [44, 45].
 
@@ -107,14 +111,15 @@ This final subsection should synthesize the preceding literature rather than int
 
 The research gaps can be summarized as follows:
 
-1. Label clipping and normalization are not consistently controlled before architecture and loss comparisons.
-2. Normalization strategies have not been systematically compared across all four C-MAPSS sub-datasets.
-3. The reliability boundary among hard, soft, and end-to-end routing has not been directly evaluated under controlled conditions.
-4. The dependence between RUL clipping and loss-function performance has not been tested under cross-dataset multiple-comparison correction.
+0. **(★NEW — Cross-cutting) Reproducibility and multi-seed evaluation:** Single-seed RMSE reporting — standard across virtually all CMAPSS literature — has been shown to systematically underrepresent central tendency (Freitas et al., 2026), making cross-study comparisons of factor-level effects statistically unreliable without repeated-run designs.
+1. **Label clipping and normalization** are not consistently controlled before architecture and loss comparisons, preventing clean attribution of reported gains.
+2. **Normalization strategies** have not been compared with pairwise statistical significance testing across all four sub-datasets; Ruvaifa et al. (2026) approached this but without BH-FDR correction.
+3. **The reliability boundary among hard, soft, and end-to-end routing** has not been directly evaluated under matched prognostic conditions on both multi-fault CMAPSS sub-datasets.
+4. **The clipping–loss interaction** has not been tested under cross-dataset multiple-comparison correction, leaving open whether reported single-dataset loss gains survive the first-tier prerequisite.
 
 Recommended closing research question:
 
-> Accordingly, this study asks which pipeline design choices materially alter predictive reliability, which introduce avoidable failure risks, and which provide no detectable incremental benefit under controlled C-MAPSS experiments.
+> Accordingly, this study asks which pipeline design choices materially alter predictive reliability, which introduce avoidable failure risks, and which provide no detectable incremental benefit under controlled, multi-seed C-MAPSS experiments with multiple-comparison correction.
 
 This sentence should lead directly into Section III and the H1–H4 experimental design.
 

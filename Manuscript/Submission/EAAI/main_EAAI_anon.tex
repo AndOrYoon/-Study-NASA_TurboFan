@@ -1,6 +1,6 @@
-\documentclass[review,12pt]{elsarticle}
-% Elsevier elsarticle class — review mode (single column, line numbers)
-% Change to [preprint,12pt] for a clean preprint or [final,12pt] for final
+\documentclass[preprint,10pt]{elsarticle}
+% Elsevier elsarticle class — preprint 10pt (48p compiled; within EAAI 50p limit)
+% Change to [review,12pt] for annotated draft with line numbers
 
 \usepackage{fontspec}
 \usepackage{underscore}
@@ -17,7 +17,7 @@
 \modulolinenumbers[5]
 \emergencystretch=2em
 
-\journal{Reliability Engineering \& System Safety}
+\journal{Engineering Applications of Artificial Intelligence}
 
 \bibliographystyle{elsarticle-num}
 
@@ -28,41 +28,22 @@
 
 \title{From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction}
 
-\author[inst1]{Young Seog Yoon\corref{cor1}\fnref{orcid1}}
-\ead{isay@etri.re.kr}
-\cortext[cor1]{Corresponding author}
-\fntext[orcid1]{ORCID: 0000-0003-3796-8480}
-
-\author[inst1]{Eun Seo Lee}
-\ead{eslee@etri.re.kr}
-
-\author[inst1]{Hyeontae Kim}
-\ead{kht@etri.re.kr}
-
-\author[inst2]{Ji Yeon Son}
-\ead{jyson@etri.re.kr}
-
-\affiliation[inst1]{organization={Electronics and Telecommunications Research Institute (ETRI)},
-             department={Behavioral Intelligence for Autonomous Manufacturing Research Section},
-             city={Daejeon},
-             country={South Korea}}
-
-\affiliation[inst2]{organization={Electronics and Telecommunications Research Institute (ETRI)},
-             department={Autonomous Manufacturing Research Division},
-             city={Daejeon},
-             country={South Korea}}
+% Author information removed for double-blind review.
+% See titlepage_eaai.tex for full author details.
+\author{Anonymous}
 
 \begin{abstract}
-Reliable Prognostic and Health Management (PHM) systems for turbofan engines embed interdependent design decisions — RUL label clipping, sensor normalization, fault-mode architecture, and training loss function — whose contributions to predictive reliability are rarely isolated. This study presents a controlled ablation across all four NASA CMAPSS sub-datasets (FD001–FD004), covering five clipping thresholds, seven normalization strategies, four fault-mode architectures, and seven loss functions, with all comparisons Benjamini-Hochberg FDR-corrected.
+Remaining Useful Life (RUL) prediction for turbofan engines involves interdependent design decisions --- label clipping, sensor normalization, fault-mode routing architecture, and loss function --- whose individual contributions to predictive accuracy are rarely isolated under equal experimental conditions.
 
-Fleet min-max normalization outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD004 under the primary seven-strategy screening protocol; a supplementary protocol-unified N1--N3 comparison confirmed cross-protocol robustness on FD001 and FD002 but found no detectable difference on FD004 (p$_\text{BH}$ = 0.92), indicating protocol sensitivity on multi-condition datasets. The anomalously high inter-seed variance on FD003 (RMSE std = 12.86 vs.\ $\leq\!1.84$ elsewhere) resolved to std = 0.67 under a backbone-matched controlled protocol, indicating it reflects a training-protocol interaction rather than a normalization limitation. A controlled comparison of four fault-mode architectures shows that GMM-based hard partitioning substantially degraded RMSE on both multi-fault datasets (FD003: +156\%; FD004: +76\%), while soft and end-to-end attention routing avoid this degradation but provide no statistically detectable improvement over the single-model baseline. No custom loss achieves statistically detectable improvement over MSE after multiple-comparison correction (N = 5 seeds; minimum detectable $d \approx 2.0$); removing RUL clipping inflates NASA prognostic scores by up to 306,000-fold regardless of loss design.
+As an AI contribution, this study develops a stacked Long Short-Term Memory (LSTM) ablation framework evaluating five clipping thresholds, seven normalization strategies, four fault-mode architectures, and seven loss functions across all C-MAPSS (Commercial Modular Aero-Propulsion System Simulation) sub-datasets (FD001--FD004), with all comparisons corrected via Benjamini-Hochberg False Discovery Rate (FDR) across over 1,000 training runs.
 
-These findings suggest that upstream design decisions --- RUL clipping and sensor normalisation --- produce larger and more consistent performance differences than downstream choices --- fault-mode routing and loss function --- in the present CMAPSS experiments; gate confidence is proposed as a post-training diagnostic for routing decisiveness, with a practical design checklist summarising observed priorities as a structured starting point requiring validation on representative fleet data before operational deployment.
+Applied to turbofan engine health management, the framework yields three concrete findings. Fleet min-max normalization significantly outperforms per-unit and instance-level alternatives on three of four datasets (p$_\text{BH}$ = 0.009 on FD003). GMM-based hard fault-mode partitioning substantially degrades RMSE by 76--156\% on multi-fault datasets; soft and attention-gated routing recover to baseline without statistically detectable improvement. No custom loss function outperforms mean squared error after FDR correction; removing RUL clipping inflates prognostic scores up to 306,000-fold regardless of loss design.
+
+These results provide an actionable design priority ordering for industrial RUL pipelines: label engineering and fleet normalization exert the largest effects; hard fault-mode routing is a deployment risk to manage, not a performance lever; and loss customization provides no measurable benefit under the evaluated conditions.
 \end{abstract}
 
 \begin{keyword}
 Remaining useful life prediction \sep
-Prognostics and health management \sep
 Turbofan engine \sep
 NASA CMAPSS \sep
 LSTM \sep
@@ -822,13 +803,32 @@ Collectively, three findings carry direct implications for PHM practice. First, 
 
 \section*{Funding}
 
-This work was supported by National IT Industry Promotion Agency (NIPA) grant funded by the Korea government (MSIT) (Development of Physical Data Quality Management Technologies for Physical AI, No.RS-2026-25621690).
+[Funding information withheld for double-blind review.]
 
-\section{Data and Code Availability}
+\section*{Data Availability Statement}
 
-The NASA CMAPSS dataset used in this study is publicly available at the NASA Prognostics Center of Excellence Data Repository (\url{https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/}). No data were generated or modified; the benchmark is used as-is under its public access terms. The experimental code, including all preprocessing pipelines, model implementations (M0–M3), and statistical testing routines, will be made publicly available on GitHub upon acceptance of this manuscript.
+The NASA C-MAPSS benchmark dataset used in this study is publicly available at the NASA Prognostics Center of Excellence Data Repository (\url{https://ti.arc.nasa.gov/tech/dash/groups/pcoe/prognostic-data-repository/}). No data were generated or modified; the benchmark is used as-is under its public access terms.
 
-% References — generated from manuscript reference list
+Experimental code and result files — including all preprocessing pipelines, LSTM backbone, model implementations (M0--M3), and statistical testing routines — are available at \url{[Zenodo DOI: XX.XXXXX/zenodo.XXXXXXX]} (repository URL withheld for double-blind review; will be provided upon acceptance).
+
+% ── Declaration of Generative AI ─────────────────────────────────────────────
+
+\section*{Declaration of Generative AI and AI-Assisted Technologies in the
+          Manuscript Preparation Process}
+
+During the preparation of this work the authors used Claude (Anthropic) in order
+to assist with manuscript drafting, literature synthesis, and code development.
+After using this tool, the authors reviewed and edited the content as needed and
+take full responsibility for the content of the publication.
+
+% ── CRediT Author Contributions ──────────────────────────────────────────────
+
+\section*{Author Contributions}
+
+[Author contributions withheld for double-blind review. See titlepage\_EAAI.tex.]
+
+% ── References ───────────────────────────────────────────────────────────────
+
 % Replace \begin{thebibliography} with \bibliography{references}
 % if you use BibTeX (references.bib provided separately).
 \begin{thebibliography}{99}

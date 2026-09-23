@@ -1,0 +1,7 @@
+Highlights
+
+Systematic LSTM ablation with BH-FDR correction across 1,000+ turbofan training runs
+Fleet min-max normalization significantly outperforms per-unit and RevIN strategies
+GMM hard routing degrades RMSE by 76–156%; soft and attention gating avoid collapse
+No custom loss function outperforms MSE after Benjamini-Hochberg FDR correction
+Label engineering and fleet normalization dominate loss design and routing choices
