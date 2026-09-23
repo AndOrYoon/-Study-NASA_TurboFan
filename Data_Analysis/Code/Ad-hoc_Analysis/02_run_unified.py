@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 """
 02_run_unified.py
 H2-H3 Unified-Control Ad-hoc Analysis — Experiment Runner
@@ -20,8 +20,8 @@ sys.stdout.reconfigure(encoding='utf-8')
 from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "Code" / "shared"))
-sys.path.insert(0, str(_ROOT / "Code" / "H5_normalization"))
-sys.path.insert(0, str(_ROOT / "Code" / "H6_fault_mode" / "phase2_models"))
+sys.path.insert(0, str(_ROOT / "Code" / "H2_normalization"))
+sys.path.insert(0, str(_ROOT / "Code" / "H3_fault_mode" / "phase2_models"))
 sys.path.insert(0, str(Path(__file__).parent))
 
 import numpy as np

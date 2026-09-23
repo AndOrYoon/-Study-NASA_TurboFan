@@ -1,7 +1,7 @@
-import sys, importlib
+﻿import sys, importlib
 sys.stdout.reconfigure(encoding='utf-8')
-sys.path.insert(0, "Data_Analysis/Code/H5_normalization")
-sys.path.insert(0, "Data_Analysis/Code/H6_fault_mode/phase2_models")
+sys.path.insert(0, "Data_Analysis/Code/H2_normalization")
+sys.path.insert(0, "Data_Analysis/Code/H3_fault_mode/phase2_models")
 sys.path.insert(0, "Data_Analysis/Code/shared")
 sys.path.insert(0, "Data_Analysis/Code/Ad-hoc_Analysis")
 
