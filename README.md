@@ -13,10 +13,10 @@ Controlled ablation study isolating four interdependent design decisions in turb
 
 | Hypothesis | Factor | Levels | Verdict |
 |-----------|--------|--------|---------|
-| H2 | RUL label clipping threshold | 5 (75, 100, 125, 130, None) | Partially accepted |
-| H5 | Sensor normalization strategy | 7 (N1–N7) | Rejected (N1 wins) |
-| H6 | Fault-mode routing architecture | 4 (M0–M3) | Partially revised |
-| H7 | Training loss function | 7 (L1–L7) | Rejected (MSE wins) |
+| H1 | RUL label clipping threshold | 5 (75, 100, 125, 130, None) | Partially accepted |
+| H2 | Sensor normalization strategy | 7 (N1–N7) | Rejected (N1 wins) |
+| H3 | Fault-mode routing architecture | 4 (M0–M3) | Partially revised |
+| H4 | Training loss function | 7 (L1–L7) | Rejected (MSE wins) |
 
 All comparisons: Wilcoxon rank-sum + Benjamini-Hochberg FDR correction (α = 0.05).  
 **Total training runs: 1,000+** across all hypotheses and datasets.
@@ -56,7 +56,7 @@ Seeds: [0, 1, 2, 3, 4] — report mean ± std over 5 runs.
 
 ## Key Results
 
-### H2 — RUL Clipping
+### H1 — RUL Clipping
 
 clip = 125 minimises RMSE across all datasets. clip = None causes catastrophic NASA Score inflation on FD003 (306,000× vs. clip = 125).
 
@@ -70,7 +70,7 @@ clip = 125 minimises RMSE across all datasets. clip = None causes catastrophic N
 
 ---
 
-### H5 — Sensor Normalization
+### H2 — Sensor Normalization
 
 Fleet min-max (N1) significantly outperforms all per-unit and instance-level alternatives on FD001, FD002, and FD003 (p_BH = 0.009). No statistically detectable difference on FD004 under the unified protocol (p_BH = 0.46 — protocol-sensitive multi-condition dataset).
 
@@ -84,7 +84,7 @@ RevIN is competitive on FD001 but degrades substantially on FD002/FD004 (multi-c
 
 ---
 
-### H6 — Fault-Mode Architecture
+### H3 — Fault-Mode Architecture
 
 > ⚠️ **Corrected results** — original protocol had M0 mean-prediction collapse on FD003 (all 5 seeds predicted constant ~87; RMSE = 43.23). After correcting the protocol (C-Full: randomised val split, MIN_EPOCHS warmup, 5 seeds × 8 conditions = 40 runs):
 
@@ -103,7 +103,7 @@ RevIN is competitive on FD001 but degrades substantially on FD002/FD004 (multi-c
 
 ---
 
-### H7 — Training Loss Function
+### H4 — Training Loss Function
 
 No custom loss achieves statistically significant improvement over MSE after BH-FDR correction across 96 pairwise comparisons (minimum p_BH = 0.176). RUL clipping is the dominant source of NASA Score variance, not the loss function.
 
@@ -121,11 +121,11 @@ No custom loss achieves statistically significant improvement over MSE after BH-
 ```
 UPSTREAM ──────────────────────────────────── DOWNSTREAM
 
-[1] Label Engineering     [2] Normalization     [3] Architecture     [4] Loss Function
-    clip = 125                Fleet MinMax           Avoid M1              MSE default
-    306,000× NASA Score       p_BH = 0.009           p_BH = 0.0045         No gain after
-    if miscalibrated          on FD003               significantly          BH-FDR
-                                                      worse
+[H1] Label Engineering   [H2] Normalization   [H3] Architecture    [H4] Loss Function
+     clip = 125               Fleet MinMax          Avoid M1              MSE default
+     306,000× NASA Score      p_BH = 0.009          p_BH = 0.0045         No gain after
+     if miscalibrated         on FD003              significantly          BH-FDR
+                                                     worse
 ```
 
 Upstream choices produce larger and more consistent effects than downstream choices. Resolve each tier before investing in the next.
@@ -146,13 +146,16 @@ C:\BMAD_PY313\
 │   ├── Code/
 │   │   ├── shared/
 │   │   │   └── op_condition_utils.py   ← K-means residualization (FD002/FD004)
-│   │   ├── H2_clipping/                ← Scripts 01–05
-│   │   ├── H5_normalization/           ← Scripts 01–06
-│   │   ├── H6_fault_mode/              ← phase1 / phase2 / phase3
-│   │   ├── H7_loss_function/           ← Scripts 00–08 + run_all_h7.py
-│   │   └── Ad-hoc_Analysis/            ← Unified N1/N3 protocol + corrected H6
+│   │   ├── H2_clipping/                ← H1 experiment scripts (01–05)
+│   │   ├── H5_normalization/           ← H2 experiment scripts (01–06)
+│   │   ├── H6_fault_mode/              ← H3 experiment scripts (phase1/2/3)
+│   │   ├── H7_loss_function/           ← H4 experiment scripts (00–08 + run_all)
+│   │   └── Ad-hoc_Analysis/            ← Unified N1/N3 protocol + corrected H3
 │   └── Results/
-│       ├── H{2,5,6,7}_*/               ← Experiment CSVs, figures, checkpoints
+│       ├── H2_clipping/                ← H1 output CSVs, figures
+│       ├── H5_normalization/           ← H2 output CSVs, figures
+│       ├── H6_fault_mode/              ← H3 output CSVs, figures, checkpoints
+│       ├── H7_loss_function/           ← H4 output CSVs, figures
 │       ├── Ad-hoc_Analysis/            ← unified_results.csv, statistical_tests.csv
 │       └── H6_corrected/               ← h6_corrected_results.csv (C-Full, 40 runs)
 └── Manuscript/
@@ -174,6 +177,8 @@ C:\BMAD_PY313\
             ├── References_EAAI.md      ← v1.1 (54 refs, Section Usage Map)
             └── Preparation_for_Submitting_EAAI.md  ← 7-task checklist
 ```
+
+> **Note on folder naming:** Code and Results folders retain their original names (`H2_clipping/`, `H5_normalization/`, `H6_fault_mode/`, `H7_loss_function/`) for backward compatibility with experiment scripts. These correspond to manuscript hypotheses H1–H4 respectively.
 
 ---
 
@@ -208,13 +213,13 @@ C:\BMAD_PY313\
 # Activate virtual environment
 NASA_TurboFan\Scripts\activate
 
-# Run all H7 loss function experiments
+# Run all H4 (loss function) experiments
 python Data_Analysis\Code\H7_loss_function\run_all_h7.py
 
-# Run corrected H6 (C-Full protocol, 40 runs)
+# Run corrected H3 (fault-mode, C-Full protocol, 40 runs)
 python Data_Analysis\Code\Ad-hoc_Analysis\04_run_h6_corrected.py
 
-# Run single hypothesis stage
+# Run single H2 (normalization) stage
 python Data_Analysis\Code\H5_normalization\04_run_experiments.py
 ```
 

@@ -1,6 +1,6 @@
-# References
+﻿# References
 
-> **Draft status:** v1.1 — 2026-09-23 (Section Usage Map corrected: [25]–[29] H6→H5, [34]–[36] H7→H6, [40]–[42] H7 추가; [30]–[36] "Authors not retrieved" 해소 보류)
+> **Draft status:** v1.1 — 2026-09-23 (Section Usage Map corrected: [25]–[29] H3→H2, [34]–[36] H4→H3, [40]–[42] H4 추가; [30]–[36] "Authors not retrieved" 해소 보류)
 
 **Paper:** From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction
 
@@ -8,7 +8,7 @@
 
 ## Section Usage Map
 
-| Ref # | Background | H2 Clipping | H5 Normalization | H6 Fault Mode | H7 Loss Fn |
+| Ref # | Background | H1 Clipping | H2 Normalization | H3 Fault Mode | H4 Loss Fn |
 |-------|:---------:|:-----------:|:----------------:|:-------------:|:----------:|
 | [1]   | ✓ | ✓ | ✓ | | |
 | [2]   | ✓ | ✓ | ✓ | | |
@@ -71,7 +71,7 @@
 "Damage Propagation Modeling for Aircraft Engine Run-to-Failure Simulation."
 *Proceedings of the 1st International Conference on Prognostics and Health Management (PHM 2008)*, Denver, CO.
 URL: https://www.researchgate.net/publication/251867156
-**Used in:** Background, H2, H5
+**Used in:** Background, H1, H1
 **Note:** Introduces the C-MAPSS simulation tool and the FD001–FD004 benchmark with 21 sensors and six operating conditions; the mandatory first citation in any CMAPSS paper. Establishes the six operating-condition regimes in FD002/FD004 that make fleet-level normalization essential.
 
 ---
@@ -80,7 +80,7 @@ URL: https://www.researchgate.net/publication/251867156
 "Recurrent Neural Networks for Remaining Useful Life Estimation."
 *Proceedings of the 1st International Conference on Prognostics and Health Management (PHM 2008)*, IEEE. DOI: 10.1109/PHM.2008.4711422
 URL: https://ieeexplore.ieee.org/document/4711422
-**Used in:** Background, H2, H5
+**Used in:** Background, H1, H1
 **Note:** PHM 2008 competition runner-up; established global min-max sensor scaling on the training partition as the canonical preprocessing step, and framed CMAPSS as an RUL regression task.
 
 ---
@@ -90,7 +90,7 @@ URL: https://ieeexplore.ieee.org/document/4711422
 *International Journal of Prognostics and Health Management*, Vol. 5, No. 2.
 DOI: 10.36001/ijphm.2014.v5i2.2236
 URL: https://papers.phmsociety.org/index.php/ijphm/article/view/2236
-**Used in:** H2, H7
+**Used in:** H1, H4
 **Note:** Canonical CMAPSS benchmark survey (179 citations); documents heterogeneity of preprocessing choices across 70+ published methods and provides the authoritative definition of the asymmetric NASA s-score metric used in H7.
 
 ---
@@ -112,7 +112,7 @@ DOI: 10.1007/978-3-319-32025-0_14
 *2017 IEEE International Conference on Prognostics and Health Management (ICPHM)*, pp. 88–95.
 DOI: 10.1109/ICPHM.2017.7998311
 URL: https://www.semanticscholar.org/paper/e66afb33d246dbe3199fd57bcfc1b611136d96c2
-**Used in:** Background, H2
+**Used in:** Background, H1
 **Clip value:** 125
 **RMSE:** FD001≈16.14, FD003≈16.18
 **Note:** Most widely cited source for the clip=125 convention; introduced the stacked LSTM architecture that established the de facto community standard for both architecture and preprocessing — the backbone adopted in this study.
@@ -123,7 +123,7 @@ URL: https://www.semanticscholar.org/paper/e66afb33d246dbe3199fd57bcfc1b611136d9
 "Remaining Useful Life Estimation in Prognostics Using Deep Convolution Neural Networks."
 *Reliability Engineering & System Safety*, Vol. 172, pp. 1–11.
 DOI: 10.1016/j.ress.2017.11.021
-**Used in:** Background, H2
+**Used in:** Background, H1
 **Clip value:** 125
 **RMSE:** FD001≈12.61, FD002≈22.78, FD003≈12.64, FD004≈23.21
 **Note:** Highly cited multi-scale CNN that solidified clip=125 as standard and provided the earliest explicit empirical justification ("sensor signals are uninformative above ~125 cycles").
@@ -211,7 +211,7 @@ DOI: 10.1109/JSEN.2023.3335994
 *Scientific Reports*, 2025 (18 citations).
 DOI: 10.1038/s41598-025-09155-z
 PMC: https://pmc.ncbi.nlm.nih.gov/articles/PMC12276258/
-**Used in:** Background, H2, H6, H7
+**Used in:** Background, H1, H3, H4
 **Clip value:** 125
 **RMSE:** FD001=14.44, FD003=**13.40**; NASA FD003=264.47
 **Note:** CAELSTM (Convolutional Autoencoder + Attention LSTM); the primary benchmark against which H6 M3 (RMSE=14.78±1.32 on FD003) is compared. Uses standard MSE — strong evidence supporting H7's finding that architecture matters more than loss function.
@@ -246,7 +246,7 @@ DOI: 10.1016/j.ymssp.2024.111120
 *IEEE 37th International Conference on Tools with Artificial Intelligence (ICTAI 2025)*.
 DOI: 10.1109/ICTAI66417.2025.00160 | arXiv: 2605.02507
 URL: https://arxiv.org/abs/2605.02507
-**Used in:** H2, H5
+**Used in:** H1, H1
 **Clip value:** 125 (explicitly states "consistent with prior work … reduces label variance during the initial stable phase")
 **Note:** Most explicit recent statement justifying clip=125 as a preprocessing variable; ablates normalization, denoising, and feature selection on CMAPSS.
 
@@ -257,7 +257,7 @@ URL: https://arxiv.org/abs/2605.02507
 *Applied Sciences*, Vol. 13, No. 21, Article 11893.
 DOI: 10.3390/app132111893
 URL: https://www.mdpi.com/2076-3417/13/21/11893
-**Used in:** H2
+**Used in:** H1
 **Clip value:** Data-driven per-engine change-point (not fixed)
 **Note:** Challenges the fixed-threshold paradigm by replacing the hardcoded clip with a per-engine change-point estimate; motivates the question of whether any fixed threshold is optimal.
 
@@ -268,7 +268,7 @@ URL: https://www.mdpi.com/2076-3417/13/21/11893
 *Asia Pacific Conference of the PHM Society 2023*, Vol. 4, No. 1.
 DOI: 10.36001/phmap.2023.v4i1.3611 | arXiv: 2309.12445
 URL: https://arxiv.org/abs/2309.12445
-**Used in:** H2
+**Used in:** H1
 **Clip value:** 128 (not 125)
 **Note:** Illustrates that the "standard" threshold is not uniformly 125 — evidence of community inconsistency motivating H2's quantitative comparison.
 
@@ -279,7 +279,7 @@ URL: https://arxiv.org/abs/2309.12445
 *Control Engineering Practice*, 2024.
 DOI: 10.1016/j.conengprac.2023.105840 | arXiv: 2401.04351
 URL: https://arxiv.org/abs/2401.04351
-**Used in:** H2
+**Used in:** H1
 **Clip value:** Per-engine (data-driven)
 **Note:** Extends data-driven labeling to FD002/FD004 (six conditions), reporting 5.6–7.5% RMSE improvement over fixed-threshold LSTM baselines — reinforces H2's finding that clipping matters most under multi-condition datasets.
 
@@ -289,7 +289,7 @@ URL: https://arxiv.org/abs/2401.04351
 "Asymmetric-Loss-Guided Hybrid CNN-BiLSTM-Attention Model for Industrial RUL Prediction with Interpretable Failure Heatmaps."
 *arXiv preprint*, April 2026. arXiv: 2604.13459
 URL: https://arxiv.org/abs/2604.13459
-**Used in:** H2, H7
+**Used in:** H1, H4
 **Clip value:** 130 on FD001 (without explicit justification)
 **RMSE FD001:** 17.52; NASA S-Score FD001: 922.06
 **Note:** Most recent paper using clip=130; implements NASA asymmetric exponential loss (H7 L2) as training objective — weaker RMSE than MSE-trained baselines, directly supporting H7's null result.
@@ -302,7 +302,7 @@ URL: https://arxiv.org/abs/2604.13459
 "Reversible Instance Normalization for Accurate Time-Series Forecasting against Distribution Shift."
 *International Conference on Learning Representations (ICLR 2022)*.
 URL: https://openreview.net/forum?id=cGDAkQo1C0p
-**Used in:** H5, H6
+**Used in:** H1, H3
 **Note:** Original RevIN paper; proposes symmetric per-instance mean/variance removal and restoration to counter distribution shift — the technique evaluated as N7 in H5. Also motivates unsupervised regime detection in H6.
 
 ---
@@ -311,7 +311,7 @@ URL: https://openreview.net/forum?id=cGDAkQo1C0p
 "A Framework for Predicting the Remaining Useful Life of Machinery Working under Time-Varying Operational Conditions."
 *Applied Soft Computing*, 2022 (20 citations).
 URL: https://consensus.app/papers/details/c50add3976c55431a872966d2a1caf13/
-**Used in:** H5
+**Used in:** H1
 **Note:** Proposes MOC-based Normalization — clusters operating conditions and recalibrates sensor amplitude jumps at condition change-points in FD002/FD004; the closest prior work to the K-means residualization used in this study.
 
 ---
@@ -320,7 +320,7 @@ URL: https://consensus.app/papers/details/c50add3976c55431a872966d2a1caf13/
 "On the Role of Reversible Instance Normalization."
 *arXiv preprint*, 2026.
 URL: https://consensus.app/papers/details/f2feae60790d5d18a0c5b5358099fbd4/
-**Used in:** H5
+**Used in:** H1
 **Note:** Ablation study revealing that several RevIN components are redundant or detrimental; identifies three distinct normalization challenges (temporal, spatial, conditional) that RevIN conflates — directly supports H5's finding that RevIN fails on multi-condition FD002/FD004.
 
 ---
@@ -329,7 +329,7 @@ URL: https://consensus.app/papers/details/f2feae60790d5d18a0c5b5358099fbd4/
 "Noise or Signal? Deconstructing Contradictions and An Adaptive Remedy for Reversible Normalization in Time Series Forecasting."
 *arXiv preprint*, October 2025. arXiv: 2510.04667
 URL: https://arxiv.org/abs/2510.04667
-**Used in:** H5
+**Used in:** H1
 **Note:** Identifies systematic failure modes of RevIN-style normalization when instance statistics encode non-degradation variance (regime shifts) — precisely the mechanism by which RevIN conflates operating-condition offsets with degradation trends in FD002/FD004.
 
 ---
@@ -338,7 +338,7 @@ URL: https://arxiv.org/abs/2510.04667
 "Early Fault Detection on CMAPSS with Unsupervised LSTM Autoencoders."
 *arXiv preprint*, January 2026. arXiv: 2601.10269
 URL: https://arxiv.org/abs/2601.10269
-**Used in:** H5, H6
+**Used in:** H1, H3
 **Note:** Demonstrates regression-based operating-condition normalization for turbofan sensor data; explicitly shows that raw normalization without condition decoupling is inadequate for FD002/FD004. Also motivates unsupervised fault onset detection for H6.
 
 ---
@@ -347,7 +347,7 @@ URL: https://arxiv.org/abs/2601.10269
 "IN-Flow: Instance Normalization Flow for Non-Stationary Time Series Forecasting."
 *Proceedings of the 31st ACM SIGKDD Conference on Knowledge Discovery and Data Mining*, 2025.
 DOI: 10.1145/3690624.3709260 | arXiv: https://arxiv.org/abs/2401.16777
-**Used in:** H5
+**Used in:** H1
 **Note:** Frames per-instance normalization as a distribution transformation problem; shows fixed instance statistics (RevIN) are insufficient when underlying regimes shift — theoretical grounding for RevIN's underperformance in multi-condition prognostics.
 
 ---
@@ -357,7 +357,7 @@ DOI: 10.1145/3690624.3709260 | arXiv: https://arxiv.org/abs/2401.16777
 *International Journal of Computational Intelligence Systems*, 2024 (69 citations).
 DOI: 10.1007/s44196-024-00639-w
 URL: https://link.springer.com/article/10.1007/s44196-024-00639-w
-**Used in:** H5
+**Used in:** H1
 **Note:** Applies global (fleet-level) feature normalization across all four CMAPSS subsets and achieves competitive RMSE; effectively validates fleet MinMax as the field-standard preprocessing choice.
 
 ---
@@ -369,7 +369,7 @@ URL: https://link.springer.com/article/10.1007/s44196-024-00639-w
 *Advanced Engineering Informatics*, Vol. 60, 2024, Article 102360.
 DOI: 10.1016/j.aei.2024.102360
 URL: https://www.sciencedirect.com/science/article/abs/pii/S1474034624007043
-**Used in:** H6
+**Used in:** H3
 **Note:** Closest supervised counterpart to H6 — uses unsupervised autoencoder + K-means to cluster fault modes then trains a multi-task Self-Attention Capsule Network with FM-identification and RUL sub-networks. Requires the clustering step separate from the RUL model (unlike H6 M3's end-to-end approach).
 
 ---
@@ -378,7 +378,7 @@ URL: https://www.sciencedirect.com/science/article/abs/pii/S1474034624007043
 "Unsupervised Classification and Remaining Useful Life Prediction for Turbofan Engines Using Autoencoders and Gaussian Mixture Models: A Comprehensive Framework for Predictive Maintenance."
 *Applied Sciences*, Vol. 15, No. 14, Article 7884, 2025.
 DOI: https://www.mdpi.com/2076-3417/15/14/7884
-**Used in:** H6
+**Used in:** H3
 **Note:** Directly validates the GMM + LSTM pipeline — autoencoder → GMM clustering → state-specific LSTM+attention on CMAPSS (including FD003/FD004); nearest published implementation to H6 Phase 1+2 pipeline.
 
 ---
@@ -387,7 +387,7 @@ DOI: https://www.mdpi.com/2076-3417/15/14/7884
 "Multi-Condition Remaining Useful Life Prediction Based on Mixture of Encoders (MoEFormer)."
 *Entropy*, Vol. 27, No. 1, Article 79, January 2025.
 DOI: https://www.mdpi.com/1099-4300/27/1/79
-**Used in:** H6
+**Used in:** H3
 **Note:** Soft-gated mixture-of-encoders Transformer applied to FD002/FD004; the closest published architecture to H6's M2 (soft-gating branch). Reduces NASA Score by 38.2% and 35% on FD002/FD004 vs second-best competitor.
 
 ---
@@ -396,7 +396,7 @@ DOI: https://www.mdpi.com/1099-4300/27/1/79
 "Remaining Useful Life Prediction for Aircraft Engines under High-Pressure Compressor Degradation Faults Based on FC-AMSLSTM."
 *Aerospace*, Vol. 11, No. 4, Article 293, 2024.
 DOI: https://www.mdpi.com/2226-4310/11/4/293
-**Used in:** H6
+**Used in:** H3
 **Note:** Explicitly addresses the HPC vs. fan degradation mixture in FD003/FD004; proposes a decline-index fault classification and decoupling stage before CNN+LSTM — directly motivates H6's fault separation design.
 
 ---
@@ -405,7 +405,7 @@ DOI: https://www.mdpi.com/2226-4310/11/4/293
 "Prognostics of Multisensor Systems with Unknown and Unlabeled Failure Modes via Bayesian Nonparametric Process Mixtures."
 *arXiv preprint*, February 2026. arXiv: 2602.19263
 URL: https://arxiv.org/abs/2602.19263
-**Used in:** H6
+**Used in:** H3
 **Note:** Proposes a Dirichlet process mixture model that jointly discovers an unknown number of failure modes without labels — contextualizes why H6's GMM-based unsupervised discovery is important and shows the field's movement toward label-free fault identification.
 
 ---
@@ -415,7 +415,7 @@ URL: https://arxiv.org/abs/2602.19263
 *International Journal of Prognostics and Health Management (IJPHM)*, 2023.
 DOI: 10.36001/ijphm.2023.v14i2.3486
 URL: https://papers.phmsociety.org/index.php/ijphm/article/view/3486
-**Used in:** H6
+**Used in:** H3
 **Note:** Analyses FD003/FD004 failure mode complexity (HPC + fan degradation) and establishes why co-mingling both fault modes in a single model degrades performance — foundational motivation for H6's separation hypothesis.
 
 ---
@@ -425,7 +425,7 @@ URL: https://papers.phmsociety.org/index.php/ijphm/article/view/3486
 *Scientific Reports*, 2025.
 DOI: https://www.nature.com/articles/s41598-025-23473-2
 PMC: https://pmc.ncbi.nlm.nih.gov/articles/PMC12615660/
-**Used in:** H6
+**Used in:** H3
 **Note:** Benchmarks LightGBM + CatBoost + Gradient Boosting ensemble across all four CMAPSS sub-datasets with SHAP interpretability — recent SOTA ensemble baseline for positioning H6 M3's deep-learning approach.
 
 ---
@@ -437,7 +437,7 @@ PMC: https://pmc.ncbi.nlm.nih.gov/articles/PMC12615660/
 *Sensors*, Vol. 20, No. 3, Article 723 (103 citations).
 DOI: 10.3390/s20030723
 URL: https://www.mdpi.com/1424-8220/20/3/723 | PMC: https://pmc.ncbi.nlm.nih.gov/articles/PMC7038523/
-**Used in:** H7
+**Used in:** H4
 **Loss proposed:** (a) Dynamically-weighted MSE (L3 motivation); (b) focal loss adapted to regression (L4 motivation)
 **Note:** Primary motivating paper for H7 L3/L4; evaluates on CMAPSS with BiGRU and BiLSTM. Single-run results without multi-seed statistical correction — H7 provides the first BH-FDR-corrected comparison of these loss types.
 
@@ -447,7 +447,7 @@ URL: https://www.mdpi.com/1424-8220/20/3/723 | PMC: https://pmc.ncbi.nlm.nih.gov
 "Asymmetric Loss Functions for Deep Learning Early Predictions of Remaining Useful Life in Aerospace Gas Turbine Engines."
 *2020 International Joint Conference on Neural Networks (IJCNN)* (16 citations).
 URL: https://consensus.app/papers/details/1707b0b881f75caf95fbecb9864bf2e0/
-**Used in:** H7
+**Used in:** H4
 **Loss proposed:** Four asymmetric variants (MSLogE-MSE, Linear-MSE, Linear-Linear, Quadratic-Quadratic) targeting early-prediction bias.
 **Note:** Direct motivation for H7 L5 (TWA) and L7 (HubA); claims NASA score improvement on specific datasets without multi-seed variance reporting.
 
@@ -457,7 +457,7 @@ URL: https://consensus.app/papers/details/1707b0b881f75caf95fbecb9864bf2e0/
 "A Multi-Head Neural Network with Unsymmetrical Constraints for Remaining Useful Life Prediction."
 *Advanced Engineering Informatics*, 2021 (47 citations).
 URL: https://consensus.app/papers/details/c3f7da83796254a78e8c339bba91e598/
-**Used in:** H7
+**Used in:** H4
 **Loss proposed:** Adjustable unsymmetrical penalty loss (larger penalty for late predictions).
 **Note:** Claims 24.09% lower NASA score on FD004 vs. best prior method — without multi-seed variance, so statistical robustness is unclear. H7 tests equivalent asymmetry designs with 5-seed BH-FDR correction.
 
@@ -467,7 +467,7 @@ URL: https://consensus.app/papers/details/c3f7da83796254a78e8c339bba91e598/
 "Turbofan Engine Remaining Useful Life Prediction with Reliable Prediction Intervals via LSTM-Based Quantile Regression and Conformal Calibration."
 *Sensors (MDPI)*, Vol. 26, No. 7, Article 2249, 2026.
 DOI: https://www.mdpi.com/1424-8220/26/7/2249
-**Used in:** H7
+**Used in:** H4
 **Loss proposed:** Weighted pinball (quantile) loss + asymmetric overestimation penalty.
 **RMSE FD001:** 16.24 ± 1.30
 **Note:** Most direct antecedent for H7 L6 (Pinball); applies to CMAPSS FD001/FD002. Point-prediction RMSE comparable to MSE baselines — consistent with H7's finding that no custom loss decisively dominates.
@@ -478,7 +478,7 @@ DOI: https://www.mdpi.com/1424-8220/26/7/2249
 "Beyond Pinball Loss: Quantile Methods for Calibrated Uncertainty Quantification."
 *NeurIPS 2021* (131 citations).
 URL: https://consensus.app/papers/details/f53034955fb452d0a5987ec4d5b51cd7/
-**Used in:** H7
+**Used in:** H4
 **Note:** Foundational critique of pinball loss; shows it restricts model class and may produce poorly calibrated conditional quantiles — directly relevant to why H7 L6 (Pinball) shows no statistically significant gain and to the tau hyperparameter sensitivity found in Phase 3c.
 
 ---
@@ -487,7 +487,7 @@ URL: https://consensus.app/papers/details/f53034955fb452d0a5987ec4d5b51cd7/
 "A Deep Learning Model for Remaining Useful Life Prediction of Aircraft Turbofan Engine on C-MAPSS Dataset."
 *IEEE Access*, 2022 (75 citations).
 URL: https://consensus.app/papers/details/2c8fa9269bd956ad80e9df739b5981d6/
-**Used in:** H7
+**Used in:** H4
 **Loss proposed:** Standard MSE with improved RUL labeling (adaptive clipping via correlation-based degradation onset).
 **Note:** Achieves competitive RMSE purely through label engineering without changing the loss function — directly supports H7's conclusion that clipping/label construction dominates over loss function design.
 
@@ -499,7 +499,7 @@ URL: https://consensus.app/papers/details/2c8fa9269bd956ad80e9df739b5981d6/
 "RUL-QMoE: Multiple Non-crossing Quantile Mixture-of-Experts for Probabilistic Remaining Useful Life Predictions of Varying Battery Materials."
 *arXiv preprint*, December 2025. arXiv: 2512.23725. Extended version for IAAI-26 (38th AAAI Conf. on Innovative Applications of AI).
 URL: https://arxiv.org/abs/2512.23725
-**Used in:** H6
+**Used in:** H3
 **Note:** Probabilistic MoE for battery RUL prediction — five cathode-material-specific expert branches (LFP, NCA, NMC, LCO, NMC-LCO) with non-crossing quantile regression for uncertainty quantification. Differentiation from H6 M3: RUL-QMoE targets probabilistic interval prediction for battery degradation using supervised material-type labels to assign experts; M3 targets deterministic point prediction with unsupervised fault-mode routing for turbofan sensor sequences. The approaches share the MoE gating concept but serve orthogonal goals (uncertainty quantification vs. deterministic RMSE minimisation) and address distinct data modalities (chemistry-labelled battery cycles vs. unlabelled turbofan windows).
 
 ---
@@ -509,7 +509,7 @@ URL: https://arxiv.org/abs/2512.23725
 *IEEE Transactions on Neural Networks and Learning Systems*, Early Access, March 2025.
 DOI: 10.1109/TNNLS.2025.3548894
 URL: https://ieeexplore.ieee.org/document/10934148/
-**Used in:** H6
+**Used in:** H3
 **Note:** Proposes PSMMoEs — a mixture-of-experts framework where the gating mechanism uses deep point-to-set distance metric learning to assign unlabelled target samples to their most similar source domain expert, enabling multisource unsupervised domain adaptation for fault classification. Most direct architectural competitor to H6 M3 in PHM literature. Differentiation from H6 M3: uses metric-learning gating for cross-domain fault *classification* with multiple labelled source domains; M3 uses early-cycle attention gating for *RUL regression* within a single dataset without any domain or fault-type labels. Venue hint in reviewer brief cited Springer Complex & Intelligent Systems (likely confused with a related Springer MoE paper); verified venue is IEEE TNNLS DOI above.
 
 ---
