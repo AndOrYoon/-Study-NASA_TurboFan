@@ -15,13 +15,13 @@ isay@etri.re.kr
 
 23 September 2026
 
-[Editor-in-Chief Name]
+Prof. Patrick Siarry, Ph.D.
 Editor-in-Chief
 Engineering Applications of Artificial Intelligence
 
 ---
 
-Dear [Editor-in-Chief],
+Dear Prof. Siarry,
 
 We respectfully submit for your consideration the manuscript entitled **"From Fleet Normalization to Fault-Mode Gating: A Systematic Ablation Study of Turbofan Remaining Useful Life Prediction"** for publication as a full-length article in *Engineering Applications of Artificial Intelligence*. This work is original, has not been previously published, and is not under concurrent review at any other journal or conference. The manuscript has been prepared in accordance with the journal's double anonymized review policy.
 
